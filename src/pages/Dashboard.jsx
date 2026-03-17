@@ -53,19 +53,17 @@ export default function Dashboard() {
   const acuerdosActivos = acuerdos.filter((a) => a.estado === 'Activo').length;
 
   const buildMailtoLink = (cliente, acuerdo) => {
-    const subject = encodeURIComponent('Recordatorio de Pago de Extras - Grupo Zen');
+    const subject = encodeURIComponent('Recordatorio de Pago / Payment Reminder - GRUPO ZEN');
     const body = encodeURIComponent(
       `Estimado/a ${cliente.nombre},\n\n` +
-      `Le escribimos de GRUPO ZEN para recordarle su próximo pago programado.\n\n` +
-      `Detalle:\n` +
-      `• Proyecto: ${cliente.proyecto}\n` +
-      `• Casa: ${cliente.numeroCasa}\n` +
-      `• Saldo Pendiente: ${formatCurrency(cliente.montoAdeudado)}\n` +
-      `• Monto de Cuota: ${formatCurrency(acuerdo.montoCuota)}\n` +
-      `• Fecha de Vencimiento: ${formatDate(acuerdo.fechaProximoPago)}\n\n` +
-      `Por favor, realice su pago a la brevedad posible para mantener su cuenta al dia.\n` +
-      `En caso de que haya sido gestionado el pago, le solicitamos amablemente enviarnos su comprobante para registrar su cancelacion.\n\n` +
-      `Atentamente,\nGRUPO ZEN\nDepartamento de Cobro de Extras`
+      `Esperamos que se encuentre muy bien. Le escribimos de parte de Grupo ZEN para recordarle amablemente que su cuenta para la propiedad en el proyecto ${cliente.proyecto}, Casa ${cliente.numeroCasa}, presenta un saldo pendiente de ${formatCurrency(cliente.montoAdeudado)}.\n\n` +
+      `Por favor, realice su pago a la brevedad posible. Si ya realizó la cancelación, por favor omita este mensaje.\n\n` +
+      `Dear ${cliente.nombre},\n\n` +
+      `We hope this email finds you well. We are contacting you on behalf of Grupo ZEN to kindly remind you that your account for the property at ${cliente.proyecto}, House ${cliente.numeroCasa}, has an outstanding balance of ${formatCurrency(cliente.montoAdeudado)}.\n\n` +
+      `Please make your payment as soon as possible. If you have already made the payment, please disregard this message.\n\n` +
+      `Atentamente / Sincerely,\n` +
+      `Departamento de Cobros / Billing Department\n` +
+      `GRUPO ZEN`
     );
     return `mailto:${cliente.correo || ''}?subject=${subject}&body=${body}`;
   };
