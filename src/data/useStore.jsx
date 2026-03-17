@@ -41,9 +41,36 @@ export function StoreProvider({ children }) {
       if (aErr) console.error('Error fetching acuerdos:', aErr);
       if (pErr) console.error('Error fetching pagos:', pErr);
 
-      setClientes(cData || []);
+      // Calcular saldo pendiente en base a los pagos
+      const pagosList = pData || [];
+      const pagosPorCliente = pagosList.reduce((acc, p) => {
+        // Asumiendo que p.clienteId mapea a la columna en la db (o ajustamos si se llama cliente_id)
+        const cId = p.clienteId || p.cliente_id; 
+        acc[cId] = (acc[cId] || 0) + Number(p.monto);
+        return acc;
+      }, {});
+
+      const mappedClientes = (cData || []).map(c => {
+        const original = Number(c.monto_adeudado_inicial || 0);
+        const pagado = pagosPorCliente[c.id] || 0;
+        return {
+          id: c.id,
+          nombre: c.nombre_completo,
+          cedula: c.cedula_pasaporte,
+          telefono: c.telefono,
+          correo: c.correo,
+          proyecto: c.proyecto,
+          numeroCasa: c.numero_casa,
+          montoOriginal: original,
+          montoAdeudado: Math.max(0, original - pagado),
+          descripcionExtras: c.descripcion_extras,
+          fechaRegistro: c.created_at || new Date().toISOString()
+        };
+      });
+
+      setClientes(mappedClientes);
       setAcuerdos(aData || []);
-      setPagos(pData || []);
+      setPagos(pagosList);
     } catch (e) {
       console.error('Error in loadData:', e);
     } finally {
@@ -57,15 +84,20 @@ export function StoreProvider({ children }) {
 
   // ----- Clientes CRUD -----
   const agregarCliente = useCallback(async (cliente) => {
-    // We add fechaRegistro dynamically in the client, or let DB handle it. Assuming client.
-    const nuevCliente = { 
-      ...cliente, 
-      fechaRegistro: new Date().toISOString().split('T')[0] 
+    const dbCliente = {
+      nombre_completo: cliente.nombre,
+      cedula_pasaporte: cliente.cedula,
+      telefono: cliente.telefono,
+      correo: cliente.correo,
+      proyecto: cliente.proyecto,
+      numero_casa: cliente.numeroCasa,
+      monto_adeudado_inicial: Number(cliente.montoOriginal || cliente.montoAdeudado || 0),
+      descripcion_extras: cliente.descripcionExtras,
     };
 
     const { data, error } = await supabase
       .from('clientes')
-      .insert([nuevCliente])
+      .insert([dbCliente])
       .select()
       .single();
 
@@ -73,14 +105,46 @@ export function StoreProvider({ children }) {
       console.error('Error adding cliente:', error);
       return null;
     }
-    setClientes((prev) => [...prev, data]);
-    return data;
+    
+    const nuevoUi = {
+      id: data.id,
+      nombre: data.nombre_completo,
+      cedula: data.cedula_pasaporte,
+      telefono: data.telefono,
+      correo: data.correo,
+      proyecto: data.proyecto,
+      numeroCasa: data.numero_casa,
+      montoOriginal: Number(data.monto_adeudado_inicial || 0),
+      montoAdeudado: Number(data.monto_adeudado_inicial || 0),
+      descripcionExtras: data.descripcion_extras,
+      fechaRegistro: data.created_at || new Date().toISOString()
+    };
+    
+    setClientes((prev) => [...prev, nuevoUi]);
+    return nuevoUi;
   }, []);
 
   const actualizarCliente = useCallback(async (id, dataObj) => {
+    const dbObj = {};
+    if (dataObj.nombre !== undefined) dbObj.nombre_completo = dataObj.nombre;
+    if (dataObj.cedula !== undefined) dbObj.cedula_pasaporte = dataObj.cedula;
+    if (dataObj.telefono !== undefined) dbObj.telefono = dataObj.telefono;
+    if (dataObj.correo !== undefined) dbObj.correo = dataObj.correo;
+    if (dataObj.proyecto !== undefined) dbObj.proyecto = dataObj.proyecto;
+    if (dataObj.numeroCasa !== undefined) dbObj.numero_casa = dataObj.numeroCasa;
+    if (dataObj.montoOriginal !== undefined) dbObj.monto_adeudado_inicial = Number(dataObj.montoOriginal);
+    if (dataObj.descripcionExtras !== undefined) dbObj.descripcion_extras = dataObj.descripcionExtras;
+
+    // We don't persist montoAdeudado (current balance) anymore, it is computed dynamically
+    if (Object.keys(dbObj).length === 0) {
+      // If we only passed montoAdeudado (e.g. from registrarPago), we just update local state
+      setClientes((prev) => prev.map((c) => (c.id === id ? { ...c, ...dataObj } : c)));
+      return;
+    }
+
     const { data, error } = await supabase
       .from('clientes')
-      .update(dataObj)
+      .update(dbObj)
       .eq('id', id)
       .select()
       .single();
@@ -89,12 +153,27 @@ export function StoreProvider({ children }) {
       console.error('Error updating cliente:', error);
       return null;
     }
-    setClientes((prev) => prev.map((c) => (c.id === id ? data : c)));
+    
+    setClientes((prev) => prev.map((c) => {
+      if (c.id !== id) return c;
+      return {
+        ...c,
+        nombre: data.nombre_completo,
+        cedula: data.cedula_pasaporte,
+        telefono: data.telefono,
+        correo: data.correo,
+        proyecto: data.proyecto,
+        numeroCasa: data.numero_casa,
+        montoOriginal: Number(data.monto_adeudado_inicial),
+        descripcionExtras: data.descripcion_extras,
+      };
+    }));
     return data;
   }, []);
 
   const eliminarCliente = useCallback(async (id) => {
-    // It's possible we need to delete agreements and payments first if there are no cascading deletes.
+    // Si tus tablas de pagos y acuerdos_pago no tienen la columna como 'clienteId', 
+    // podrías necesitar ajustar esto también. Asumo 'clienteId' para pagos y acuerdos_pago.
     await supabase.from('pagos').delete().eq('clienteId', id);
     await supabase.from('acuerdos_pago').delete().eq('clienteId', id);
     const { error } = await supabase.from('clientes').delete().eq('id', id);
