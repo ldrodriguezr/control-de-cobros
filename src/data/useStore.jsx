@@ -108,7 +108,7 @@ function mapPagoFromDb(p) {
     saldoPosterior: Number(p.saldo_restante_momento_pago || 0),
     metodo: p.metodo || '',
     notas: p.notas || '',
-    fecha: p.created_at ? p.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
+    fecha: p.fecha || new Date().toISOString().split('T')[0],
   };
 }
 
@@ -155,7 +155,7 @@ export function StoreProvider({ children }) {
       ] = await Promise.all([
         supabase.from('clientes').select('*'),
         supabase.from('acuerdos_pago').select('*'),
-        supabase.from('pagos').select('*').order('created_at', { ascending: false }),
+        supabase.from('pagos').select('*').order('id', { ascending: false }),
       ]);
 
       if (cErr) console.error('Error fetching clientes:', cErr);
