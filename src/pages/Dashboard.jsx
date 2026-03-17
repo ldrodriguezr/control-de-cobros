@@ -53,7 +53,7 @@ export default function Dashboard() {
   const acuerdosActivos = acuerdos.filter((a) => a.estado === 'Activo').length;
 
   const buildMailtoLink = (cliente, acuerdo) => {
-    const subject = encodeURIComponent('Recordatorio de Pago - Grupo Zen');
+    const subject = encodeURIComponent('Recordatorio de Pago de Extras - Grupo Zen');
     const body = encodeURIComponent(
       `Estimado/a ${cliente.nombre},\n\n` +
       `Le escribimos de GRUPO ZEN para recordarle su próximo pago programado.\n\n` +
@@ -63,8 +63,9 @@ export default function Dashboard() {
       `• Saldo Pendiente: ${formatCurrency(cliente.montoAdeudado)}\n` +
       `• Monto de Cuota: ${formatCurrency(acuerdo.montoCuota)}\n` +
       `• Fecha de Vencimiento: ${formatDate(acuerdo.fechaProximoPago)}\n\n` +
-      `Por favor, realice su pago a la brevedad posible.\n\n` +
-      `Atentamente,\nGRUPO ZEN\nDepartamento de Cobros`
+      `Por favor, realice su pago a la brevedad posible para mantener su cuenta al dia.\n` +
+      `En caso de que haya sido gestionado el pago, le solicitamos amablemente enviarnos su comprobante para registrar su cancelacion.\n\n` +
+      `Atentamente,\nGRUPO ZEN\nDepartamento de Cobro de Extras`
     );
     return `mailto:${cliente.correo || ''}?subject=${subject}&body=${body}`;
   };
