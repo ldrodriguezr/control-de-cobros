@@ -343,6 +343,16 @@ export function StoreProvider({ children }) {
     return updated;
   }, []);
 
+  const eliminarAcuerdo = useCallback(async (id) => {
+    const { error } = await supabase.from('acuerdos_pago').delete().eq('id', id);
+    if (error) {
+      console.error('Error deleting acuerdo:', error);
+      return false;
+    }
+    setAcuerdos((prev) => prev.filter((a) => a.id !== id));
+    return true;
+  }, []);
+
   // ============================================================
   // Pagos
   // ============================================================
@@ -394,6 +404,25 @@ export function StoreProvider({ children }) {
     return nuevoUi;
   }, [acuerdos, actualizarAcuerdo]);
 
+  const eliminarPago = useCallback(async (pagoId) => {
+    const pagoAEliminar = pagos.find((p) => p.id === pagoId);
+    if (!pagoAEliminar) return false;
+
+    const { error } = await supabase.from('pagos').delete().eq('id', pagoId);
+    if (error) {
+      console.error('Error deleting pago:', error);
+      return false;
+    }
+
+    setPagos((prev) => prev.filter((p) => p.id !== pagoId));
+    setClientes((prev) => prev.map((c) => {
+      if (c.id !== pagoAEliminar.clienteId) return c;
+      return { ...c, montoAdeudado: Math.min(c.montoOriginal, c.montoAdeudado + pagoAEliminar.monto) };
+    }));
+
+    return true;
+  }, [pagos]);
+
   // ============================================================
   // Query helpers
   // ============================================================
@@ -427,7 +456,9 @@ export function StoreProvider({ children }) {
     eliminarCliente,
     agregarAcuerdo,
     actualizarAcuerdo,
+    eliminarAcuerdo,
     registrarPago,
+    eliminarPago,
     getCliente,
     getAcuerdoByCliente,
     getPagosByCliente,

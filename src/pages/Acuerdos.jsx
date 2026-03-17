@@ -14,7 +14,7 @@ import { useStore, calcularProximasFechas } from '../data/useStore';
 import { formatCurrency, formatDate } from '../utils/helpers';
 
 export default function Acuerdos() {
-  const { clientes, acuerdos, agregarAcuerdo, actualizarAcuerdo, getAcuerdoByCliente } = useStore();
+  const { clientes, acuerdos, agregarAcuerdo, actualizarAcuerdo, eliminarAcuerdo, getAcuerdoByCliente } = useStore();
   const [showForm, setShowForm] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState('');
   const [frecuencia, setFrecuencia] = useState('Mensual');
@@ -80,6 +80,12 @@ export default function Acuerdos() {
   const addFechaPersonalizada = () => setFechasPersonalizadas(prev => [...prev, '']);
   const removeFechaPersonalizada = (index) => setFechasPersonalizadas(prev => prev.filter((_, i) => i !== index));
   const updateFechaPersonalizada = (index, value) => setFechasPersonalizadas(prev => prev.map((f, i) => i === index ? value : f));
+
+  const handleEliminarAcuerdo = async (acuerdo) => {
+    const cliente = clientes.find(c => c.id === acuerdo.clienteId);
+    if (!window.confirm(`¿Eliminar el acuerdo de ${cliente?.nombre || 'este cliente'}? Esta acción no eliminará los pagos ya registrados.`)) return;
+    await eliminarAcuerdo(acuerdo.id);
+  };
 
   const freqConfig = {
     Mensual: { color: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500', icon: CalendarDays },
@@ -311,12 +317,21 @@ export default function Acuerdos() {
                   ))}
                 </div>
 
-                <button
-                  onClick={() => handleEdit(acuerdo)}
-                  className="w-full py-2 text-sm font-medium text-zen-600 bg-zen-50 hover:bg-zen-100 rounded-xl transition-colors"
-                >
-                  Editar Acuerdo
-                </button>
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={() => handleEdit(acuerdo)}
+                    className="flex-1 py-2 text-sm font-medium text-zen-600 bg-zen-50 hover:bg-zen-100 rounded-xl transition-colors"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => handleEliminarAcuerdo(acuerdo)}
+                    className="p-2 text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"
+                    title="Eliminar acuerdo"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -381,12 +396,21 @@ export default function Acuerdos() {
                         </div>
                       </td>
                       <td className="px-5 py-3.5">
-                        <button
-                          onClick={() => handleEdit(acuerdo)}
-                          className="text-xs font-medium text-zen-600 hover:text-zen-800 hover:underline whitespace-nowrap"
-                        >
-                          Editar
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleEdit(acuerdo)}
+                            className="text-xs font-medium text-zen-600 hover:text-zen-800 hover:underline whitespace-nowrap"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => handleEliminarAcuerdo(acuerdo)}
+                            className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
+                            title="Eliminar"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
