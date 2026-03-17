@@ -55,12 +55,15 @@ export default function Dashboard() {
   const buildMailtoLink = (cliente, acuerdo) => {
     const subject = encodeURIComponent('Recordatorio de Pago / Payment Reminder - GRUPO ZEN');
     const body = encodeURIComponent(
-      `Estimado/a ${cliente.nombre},\n\n` +
-      `Esperamos que se encuentre muy bien. Le escribimos de parte de Grupo ZEN para recordarle amablemente que su cuenta para la propiedad en el proyecto ${cliente.proyecto}, Casa ${cliente.numeroCasa}, presenta un saldo pendiente de ${formatCurrency(cliente.montoAdeudado)}.\n\n` +
-      `Por favor, realice su pago a la brevedad posible. Si ya realizó la cancelación, por favor omita este mensaje.\n\n` +
-      `Dear ${cliente.nombre},\n\n` +
-      `We hope this email finds you well. We are contacting you on behalf of Grupo ZEN to kindly remind you that your account for the property at ${cliente.proyecto}, House ${cliente.numeroCasa}, has an outstanding balance of ${formatCurrency(cliente.montoAdeudado)}.\n\n` +
-      `Please make your payment as soon as possible. If you have already made the payment, please disregard this message.\n\n` +
+      `Estimado/a ${cliente.nombre}, / Dear ${cliente.nombre},\n\n` +
+      `Esperamos que se encuentre muy bien. Le escribimos de parte de Grupo ZEN para recordarle amablemente el estado de su cuenta. / We hope this email finds you well. We are contacting you on behalf of Grupo ZEN to kindly remind you of your account status.\n\n` +
+      `--- Detalle de la Cuenta / Account Details ---\n` +
+      `• Proyecto / Project: ${cliente.proyecto}\n` +
+      `• Casa / House: ${cliente.numeroCasa}\n` +
+      `• Saldo Pendiente / Outstanding Balance: ${formatCurrency(cliente.montoAdeudado)}\n` +
+      `• Monto de Cuota / Installment Amount: ${formatCurrency(acuerdo.montoCuota)}\n` +
+      `• Fecha de Vencimiento / Due Date: ${formatDate(acuerdo.fechaProximoPago)}\n\n` +
+      `Por favor, realice su pago a la brevedad posible. Si ya realizó la cancelación, por favor omita este mensaje. / Please make your payment as soon as possible. If you have already made the payment, please disregard this message.\n\n` +
       `Atentamente / Sincerely,\n` +
       `Departamento de Cobros / Billing Department\n` +
       `GRUPO ZEN`
