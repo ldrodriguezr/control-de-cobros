@@ -9,7 +9,7 @@ import {
 import { useStore } from '../data/useStore';
 import { formatCurrency, formatDate } from '../utils/helpers';
 
-const COMISION_RATE = 0.00005; // 0.005% = monto * 0.00005
+const COMISION_RATE = 0.005; // 0.5% = monto * 0.005
 
 export default function Comisiones() {
   const { pagos, clientes } = useStore();
@@ -43,7 +43,7 @@ export default function Comisiones() {
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Control de Comisiones</h1>
-        <p className="text-gray-500 mt-1 capitalize">{mesLabel} · Tasa: 0.005% por pago</p>
+        <p className="text-gray-500 mt-1 capitalize">{mesLabel} · Tasa: 0.5% por pago</p>
       </div>
 
       {/* Summary cards */}
@@ -60,7 +60,7 @@ export default function Comisiones() {
           label="Total de Comisiones Generadas"
           value={formatCurrency(totalComisiones)}
           color="from-violet-500 to-violet-700"
-          sub="@ 0.005% por pago"
+          sub="@ 0.5% por pago"
         />
         <SummaryCard
           icon={TrendingUp}
@@ -94,7 +94,7 @@ export default function Comisiones() {
                   <th className="px-5 py-3 text-left font-semibold text-gray-600">Cliente</th>
                   <th className="px-5 py-3 text-left font-semibold text-gray-600">Método</th>
                   <th className="px-5 py-3 text-right font-semibold text-gray-600">Monto del Pago</th>
-                  <th className="px-5 py-3 text-right font-semibold text-gray-600">Comisión (0.005%)</th>
+                  <th className="px-5 py-3 text-right font-semibold text-gray-600">Comisión (0.5%)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -131,8 +131,8 @@ export default function Comisiones() {
 
       {/* Info note */}
       <div className="bg-zen-50 border border-zen-100 rounded-2xl p-4 text-sm text-zen-800">
-        <strong>Nota:</strong> La comisión se calcula automáticamente como el <strong>0.005%</strong> del monto de cada pago registrado
-        en el mes actual (monto × 0.00005). Los datos se actualizan en tiempo real al registrar nuevos pagos.
+        <strong>Nota:</strong> La comisión se calcula automáticamente como el <strong>0.5%</strong> del monto de cada pago registrado
+        en el mes actual (monto × 0.005). Los datos se actualizan en tiempo real al registrar nuevos pagos.
       </div>
     </div>
   );
