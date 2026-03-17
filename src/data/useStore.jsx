@@ -3,11 +3,83 @@ import { supabase } from '../lib/supabase';
 
 const StoreContext = createContext(null);
 
+// ============================================================
+// Mapping helpers: snake_case (DB) ↔ camelCase (UI)
+// ============================================================
 
-// Helper: calculate next payment date based on frequency
+function mapClienteFromDb(c, pagadoTotal = 0) {
+  const original = Number(c.monto_adeudado_inicial || 0);
+  return {
+    id: c.id,
+    nombre: c.nombre_completo,
+    cedula: c.cedula_pasaporte,
+    telefono: c.telefono,
+    correo: c.correo,
+    proyecto: c.proyecto,
+    numeroCasa: c.numero_casa,
+    montoOriginal: original,
+    montoAdeudado: Math.max(0, original - pagadoTotal),
+    descripcionExtras: c.descripcion_extras,
+    fechaRegistro: c.created_at || new Date().toISOString(),
+  };
+}
+
+function mapClienteToDb(ui) {
+  return {
+    nombre_completo: ui.nombre,
+    cedula_pasaporte: ui.cedula,
+    telefono: ui.telefono,
+    correo: ui.correo,
+    proyecto: ui.proyecto,
+    numero_casa: ui.numeroCasa,
+    monto_adeudado_inicial: Number(ui.montoOriginal || ui.montoAdeudado || 0),
+    descripcion_extras: ui.descripcionExtras,
+  };
+}
+
+function mapAcuerdoFromDb(a) {
+  return {
+    id: a.id,
+    clienteId: a.cliente_id,
+    frecuencia: a.frecuencia,
+    montoCuota: Number(a.monto_cuota || 0),
+    diaCorte: a.dia_corte,
+    fechaProximoPago: a.dia_corte, // use dia_corte as the "próximo pago" reference
+    estado: a.estado || 'Activo',
+    createdAt: a.created_at,
+  };
+}
+
+function mapAcuerdoToDb(ui) {
+  return {
+    cliente_id: ui.clienteId,
+    frecuencia: ui.frecuencia,
+    monto_cuota: Number(ui.montoCuota || 0),
+    dia_corte: ui.fechaInicio || ui.diaCorte || ui.fechaProximoPago,
+  };
+}
+
+function mapPagoFromDb(p) {
+  return {
+    id: p.id,
+    clienteId: p.cliente_id,
+    monto: Number(p.monto_abonado || 0),
+    comisionGenerada: Number(p.comision_generada || 0),
+    saldoPosterior: Number(p.saldo_restante_momento_pago || 0),
+    metodo: p.metodo || '',
+    notas: p.notas || '',
+    fecha: p.created_at ? p.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
+  };
+}
+
+// ============================================================
+// Helper: calculate next payment dates based on frequency
+// ============================================================
 export function calcularProximasFechas(fechaInicio, frecuencia, cantidad = 6) {
+  if (!fechaInicio) return [];
   const fechas = [];
   let fecha = new Date(fechaInicio + 'T12:00:00');
+  if (isNaN(fecha.getTime())) return [];
   for (let i = 0; i < cantidad; i++) {
     const nueva = new Date(fecha);
     if (frecuencia === 'Mensual') nueva.setMonth(nueva.getMonth() + i + 1);
@@ -18,12 +90,16 @@ export function calcularProximasFechas(fechaInicio, frecuencia, cantidad = 6) {
   return fechas;
 }
 
+// ============================================================
+// Store Provider
+// ============================================================
 export function StoreProvider({ children }) {
   const [clientes, setClientes] = useState([]);
   const [acuerdos, setAcuerdos] = useState([]);
   const [pagos, setPagos] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // ---- Load all data ----
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -34,43 +110,33 @@ export function StoreProvider({ children }) {
       ] = await Promise.all([
         supabase.from('clientes').select('*'),
         supabase.from('acuerdos_pago').select('*'),
-        supabase.from('pagos').select('*').order('fecha', { ascending: false }),
+        supabase.from('pagos').select('*').order('created_at', { ascending: false }),
       ]);
 
       if (cErr) console.error('Error fetching clientes:', cErr);
       if (aErr) console.error('Error fetching acuerdos:', aErr);
       if (pErr) console.error('Error fetching pagos:', pErr);
 
-      // Calcular saldo pendiente en base a los pagos
-      const pagosList = pData || [];
-      const pagosPorCliente = pagosList.reduce((acc, p) => {
-        // Asumiendo que p.clienteId mapea a la columna en la db (o ajustamos si se llama cliente_id)
-        const cId = p.clienteId || p.cliente_id; 
-        acc[cId] = (acc[cId] || 0) + Number(p.monto);
+      // Map pagos
+      const mappedPagos = (pData || []).map(mapPagoFromDb);
+
+      // Calculate total paid per client
+      const pagadoPorCliente = mappedPagos.reduce((acc, p) => {
+        acc[p.clienteId] = (acc[p.clienteId] || 0) + p.monto;
         return acc;
       }, {});
 
-      const mappedClientes = (cData || []).map(c => {
-        const original = Number(c.monto_adeudado_inicial || 0);
-        const pagado = pagosPorCliente[c.id] || 0;
-        return {
-          id: c.id,
-          nombre: c.nombre_completo,
-          cedula: c.cedula_pasaporte,
-          telefono: c.telefono,
-          correo: c.correo,
-          proyecto: c.proyecto,
-          numeroCasa: c.numero_casa,
-          montoOriginal: original,
-          montoAdeudado: Math.max(0, original - pagado),
-          descripcionExtras: c.descripcion_extras,
-          fechaRegistro: c.created_at || new Date().toISOString()
-        };
-      });
+      // Map clientes with balance
+      const mappedClientes = (cData || []).map(c =>
+        mapClienteFromDb(c, pagadoPorCliente[c.id] || 0)
+      );
+
+      // Map acuerdos
+      const mappedAcuerdos = (aData || []).map(mapAcuerdoFromDb);
 
       setClientes(mappedClientes);
-      setAcuerdos(aData || []);
-      setPagos(pagosList);
+      setAcuerdos(mappedAcuerdos);
+      setPagos(mappedPagos);
     } catch (e) {
       console.error('Error in loadData:', e);
     } finally {
@@ -82,18 +148,11 @@ export function StoreProvider({ children }) {
     loadData();
   }, [loadData]);
 
-  // ----- Clientes CRUD -----
+  // ============================================================
+  // Clientes CRUD
+  // ============================================================
   const agregarCliente = useCallback(async (cliente) => {
-    const dbCliente = {
-      nombre_completo: cliente.nombre,
-      cedula_pasaporte: cliente.cedula,
-      telefono: cliente.telefono,
-      correo: cliente.correo,
-      proyecto: cliente.proyecto,
-      numero_casa: cliente.numeroCasa,
-      monto_adeudado_inicial: Number(cliente.montoOriginal || cliente.montoAdeudado || 0),
-      descripcion_extras: cliente.descripcionExtras,
-    };
+    const dbCliente = mapClienteToDb(cliente);
 
     const { data, error } = await supabase
       .from('clientes')
@@ -105,26 +164,14 @@ export function StoreProvider({ children }) {
       console.error('Error adding cliente:', error);
       return null;
     }
-    
-    const nuevoUi = {
-      id: data.id,
-      nombre: data.nombre_completo,
-      cedula: data.cedula_pasaporte,
-      telefono: data.telefono,
-      correo: data.correo,
-      proyecto: data.proyecto,
-      numeroCasa: data.numero_casa,
-      montoOriginal: Number(data.monto_adeudado_inicial || 0),
-      montoAdeudado: Number(data.monto_adeudado_inicial || 0),
-      descripcionExtras: data.descripcion_extras,
-      fechaRegistro: data.created_at || new Date().toISOString()
-    };
-    
+
+    const nuevoUi = mapClienteFromDb(data, 0);
     setClientes((prev) => [...prev, nuevoUi]);
     return nuevoUi;
   }, []);
 
   const actualizarCliente = useCallback(async (id, dataObj) => {
+    // Build DB object only with changed fields
     const dbObj = {};
     if (dataObj.nombre !== undefined) dbObj.nombre_completo = dataObj.nombre;
     if (dataObj.cedula !== undefined) dbObj.cedula_pasaporte = dataObj.cedula;
@@ -135,9 +182,8 @@ export function StoreProvider({ children }) {
     if (dataObj.montoOriginal !== undefined) dbObj.monto_adeudado_inicial = Number(dataObj.montoOriginal);
     if (dataObj.descripcionExtras !== undefined) dbObj.descripcion_extras = dataObj.descripcionExtras;
 
-    // We don't persist montoAdeudado (current balance) anymore, it is computed dynamically
+    // montoAdeudado is computed, not persisted
     if (Object.keys(dbObj).length === 0) {
-      // If we only passed montoAdeudado (e.g. from registrarPago), we just update local state
       setClientes((prev) => prev.map((c) => (c.id === id ? { ...c, ...dataObj } : c)));
       return;
     }
@@ -153,7 +199,7 @@ export function StoreProvider({ children }) {
       console.error('Error updating cliente:', error);
       return null;
     }
-    
+
     setClientes((prev) => prev.map((c) => {
       if (c.id !== id) return c;
       return {
@@ -172,10 +218,9 @@ export function StoreProvider({ children }) {
   }, []);
 
   const eliminarCliente = useCallback(async (id) => {
-    // Si tus tablas de pagos y acuerdos_pago no tienen la columna como 'clienteId', 
-    // podrías necesitar ajustar esto también. Asumo 'clienteId' para pagos y acuerdos_pago.
-    await supabase.from('pagos').delete().eq('clienteId', id);
-    await supabase.from('acuerdos_pago').delete().eq('clienteId', id);
+    // Delete related records first (using snake_case column name)
+    await supabase.from('pagos').delete().eq('cliente_id', id);
+    await supabase.from('acuerdos_pago').delete().eq('cliente_id', id);
     const { error } = await supabase.from('clientes').delete().eq('id', id);
 
     if (error) {
@@ -188,12 +233,15 @@ export function StoreProvider({ children }) {
     return true;
   }, []);
 
-  // ----- Acuerdos CRUD -----
+  // ============================================================
+  // Acuerdos CRUD
+  // ============================================================
   const agregarAcuerdo = useCallback(async (acuerdo) => {
-    const nuevoAcuerdo = { ...acuerdo, estado: 'Activo' };
+    const dbAcuerdo = mapAcuerdoToDb(acuerdo);
+
     const { data, error } = await supabase
       .from('acuerdos_pago')
-      .insert([nuevoAcuerdo])
+      .insert([dbAcuerdo])
       .select()
       .single();
 
@@ -201,14 +249,23 @@ export function StoreProvider({ children }) {
       console.error('Error adding acuerdo:', error);
       return null;
     }
-    setAcuerdos((prev) => [...prev, data]);
-    return data;
+    const nuevoUi = mapAcuerdoFromDb(data);
+    setAcuerdos((prev) => [...prev, nuevoUi]);
+    return nuevoUi;
   }, []);
 
   const actualizarAcuerdo = useCallback(async (id, dataObj) => {
+    const dbObj = {};
+    if (dataObj.clienteId !== undefined) dbObj.cliente_id = dataObj.clienteId;
+    if (dataObj.frecuencia !== undefined) dbObj.frecuencia = dataObj.frecuencia;
+    if (dataObj.montoCuota !== undefined) dbObj.monto_cuota = Number(dataObj.montoCuota);
+    if (dataObj.fechaInicio !== undefined || dataObj.diaCorte !== undefined || dataObj.fechaProximoPago !== undefined) {
+      dbObj.dia_corte = dataObj.fechaInicio || dataObj.diaCorte || dataObj.fechaProximoPago;
+    }
+
     const { data, error } = await supabase
       .from('acuerdos_pago')
-      .update(dataObj)
+      .update(dbObj)
       .eq('id', id)
       .select()
       .single();
@@ -217,17 +274,31 @@ export function StoreProvider({ children }) {
       console.error('Error updating acuerdo:', error);
       return null;
     }
-    setAcuerdos((prev) => prev.map((a) => (a.id === id ? data : a)));
-    return data;
+    const updated = mapAcuerdoFromDb(data);
+    setAcuerdos((prev) => prev.map((a) => (a.id === id ? updated : a)));
+    return updated;
   }, []);
 
-  // ----- Pagos -----
+  // ============================================================
+  // Pagos
+  // ============================================================
   const registrarPago = useCallback(async (pago) => {
-    const nuevoPago = { ...pago, fecha: new Date().toISOString().split('T')[0] };
-    
+    const montoAbonado = Number(pago.monto);
+    const comisionGenerada = montoAbonado * 0.005;
+    const saldoRestante = Number(pago.saldoPosterior || 0);
+
+    const dbPago = {
+      cliente_id: pago.clienteId,
+      monto_abonado: montoAbonado,
+      comision_generada: comisionGenerada,
+      saldo_restante_momento_pago: saldoRestante,
+      metodo: pago.metodo || '',
+      notas: pago.notas || '',
+    };
+
     const { data, error } = await supabase
       .from('pagos')
-      .insert([nuevoPago])
+      .insert([dbPago])
       .select()
       .single();
 
@@ -235,17 +306,15 @@ export function StoreProvider({ children }) {
       console.error('Error recording payment:', error);
       return null;
     }
-    
-    // Refresh all data to ensure we have the correct balances if triggering logic exists on DB,
-    // otherwise update local state optimistically.
-    setPagos((prev) => [data, ...prev]);
 
-    // Update client balance in DB
-    const cliente = clientes.find((c) => c.id === pago.clienteId);
-    if (cliente) {
-      const newBalance = Math.max(0, cliente.montoAdeudado - pago.monto);
-      await actualizarCliente(cliente.id, { montoAdeudado: newBalance });
-    }
+    const nuevoUi = mapPagoFromDb(data);
+    setPagos((prev) => [nuevoUi, ...prev]);
+
+    // Update local client balance optimistically
+    setClientes((prev) => prev.map((c) => {
+      if (c.id !== pago.clienteId) return c;
+      return { ...c, montoAdeudado: Math.max(0, c.montoAdeudado - montoAbonado) };
+    }));
 
     // Advance next payment date on the agreement
     const acuerdo = acuerdos.find((a) => a.clienteId === pago.clienteId);
@@ -254,20 +323,37 @@ export function StoreProvider({ children }) {
       if (acuerdo.frecuencia === 'Mensual') next.setMonth(next.getMonth() + 1);
       else if (acuerdo.frecuencia === 'Quincenal') next.setDate(next.getDate() + 15);
       else if (acuerdo.frecuencia === 'Semanal') next.setDate(next.getDate() + 7);
-      
-      await actualizarAcuerdo(acuerdo.id, { 
-        fechaProximoPago: next.toISOString().split('T')[0] 
+
+      await actualizarAcuerdo(acuerdo.id, {
+        fechaProximoPago: next.toISOString().split('T')[0],
       });
     }
 
-    return data;
-  }, [clientes, acuerdos, actualizarCliente, actualizarAcuerdo]);
+    return nuevoUi;
+  }, [acuerdos, actualizarAcuerdo]);
 
-  // ----- Queries -----
-  const getCliente = useCallback((id) => clientes.find((c) => c.id === id) || clientes.find((c) => c.id == id), [clientes]);
-  const getAcuerdoByCliente = useCallback((clienteId) => acuerdos.find((a) => a.clienteId === clienteId) || acuerdos.find((a) => a.clienteId == clienteId), [acuerdos]);
-  const getPagosByCliente = useCallback((clienteId) => pagos.filter((p) => p.clienteId === clienteId || p.clienteId == clienteId).sort((a, b) => a.fecha.localeCompare(b.fecha)), [pagos]);
+  // ============================================================
+  // Query helpers
+  // ============================================================
+  const getCliente = useCallback(
+    (id) => clientes.find((c) => c.id === id) || clientes.find((c) => String(c.id) === String(id)),
+    [clientes]
+  );
+  const getAcuerdoByCliente = useCallback(
+    (clienteId) => acuerdos.find((a) => a.clienteId === clienteId) || acuerdos.find((a) => String(a.clienteId) === String(clienteId)),
+    [acuerdos]
+  );
+  const getPagosByCliente = useCallback(
+    (clienteId) =>
+      pagos
+        .filter((p) => p.clienteId === clienteId || String(p.clienteId) === String(clienteId))
+        .sort((a, b) => a.fecha.localeCompare(b.fecha)),
+    [pagos]
+  );
 
+  // ============================================================
+  // Context value
+  // ============================================================
   const value = {
     clientes,
     acuerdos,
