@@ -38,40 +38,64 @@ function mapClienteToDb(ui) {
 }
 
 function diaCorteToFecha(diaCorte) {
-  // dia_corte is an INT (1-31). Build a date for the current month/year.
+  if (!diaCorte) return new Date().toISOString().split('T')[0];
   const now = new Date();
   const year = now.getFullYear();
-  const month = now.getMonth(); // 0-indexed
-  const day = Math.min(Number(diaCorte), 28); // cap at 28 to avoid Feb overflow
+  const month = now.getMonth();
+  const day = Math.min(Number(diaCorte), 28);
   const d = new Date(year, month, day);
-  return d.toISOString().split('T')[0]; // → 'YYYY-MM-DD'
+  return d.toISOString().split('T')[0];
+}
+
+function getProximaFechaPersonalizada(fechasEspecificas) {
+  if (!fechasEspecificas || !Array.isArray(fechasEspecificas) || fechasEspecificas.length === 0) {
+    return new Date().toISOString().split('T')[0];
+  }
+  const hoyStr = new Date().toISOString().split('T')[0];
+  const futuras = fechasEspecificas.filter(f => f >= hoyStr).sort();
+  return futuras.length > 0 ? futuras[0] : fechasEspecificas.sort().pop();
 }
 
 function mapAcuerdoFromDb(a) {
+  const fechasEsp = a.fechas_especificas || null;
+  const esPersonalizado = a.frecuencia === 'Personalizado';
   return {
     id: a.id,
     clienteId: a.cliente_id,
     frecuencia: a.frecuencia,
     montoCuota: Number(a.monto_cuota || 0),
     diaCorte: a.dia_corte,
-    fechaProximoPago: diaCorteToFecha(a.dia_corte),
+    fechasEspecificas: fechasEsp,
+    fechaProximoPago: esPersonalizado
+      ? getProximaFechaPersonalizada(fechasEsp)
+      : diaCorteToFecha(a.dia_corte),
     estado: a.estado || 'Activo',
     createdAt: a.created_at,
   };
 }
 
 function mapAcuerdoToDb(ui) {
-  // dia_corte is an INT (1-31): extract the day number from the date string
+  if (ui.frecuencia === 'Personalizado') {
+    return {
+      cliente_id: ui.clienteId,
+      frecuencia: ui.frecuencia,
+      monto_cuota: Number(ui.montoCuota || 0),
+      dia_corte: null,
+      fechas_especificas: ui.fechasEspecificas || [],
+    };
+  }
+  // Regular frequencies
   const rawDate = ui.fechaInicio || ui.diaCorte || ui.fechaProximoPago;
   let diaCorte = rawDate;
   if (typeof rawDate === 'string' && rawDate.includes('-')) {
-    diaCorte = new Date(rawDate + 'T12:00:00').getDate(); // e.g. '2026-03-17' → 17
+    diaCorte = new Date(rawDate + 'T12:00:00').getDate();
   }
   return {
     cliente_id: ui.clienteId,
     frecuencia: ui.frecuencia,
     monto_cuota: Number(ui.montoCuota || 0),
     dia_corte: Number(diaCorte),
+    fechas_especificas: null,
   };
 }
 
@@ -91,7 +115,12 @@ function mapPagoFromDb(p) {
 // ============================================================
 // Helper: calculate next payment dates based on frequency
 // ============================================================
-export function calcularProximasFechas(fechaInicio, frecuencia, cantidad = 6) {
+export function calcularProximasFechas(fechaInicio, frecuencia, cantidad = 6, fechasEspecificas = null) {
+  // For Personalizado: return the array of custom dates sorted
+  if (frecuencia === 'Personalizado') {
+    if (!fechasEspecificas || !Array.isArray(fechasEspecificas)) return [];
+    return [...fechasEspecificas].sort();
+  }
   if (!fechaInicio) return [];
   const fechas = [];
   let fecha = new Date(fechaInicio + 'T12:00:00');
@@ -271,13 +300,32 @@ export function StoreProvider({ children }) {
   }, []);
 
   const actualizarAcuerdo = useCallback(async (id, dataObj) => {
+    // If full acuerdo data provided (from form), use mapAcuerdoToDb
+    if (dataObj.frecuencia && (dataObj.clienteId || dataObj.montoCuota !== undefined)) {
+      const dbObj = mapAcuerdoToDb(dataObj);
+      const { data, error } = await supabase
+        .from('acuerdos_pago')
+        .update(dbObj)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) {
+        console.error('Error updating acuerdo:', error);
+        return null;
+      }
+      const updated = mapAcuerdoFromDb(data);
+      setAcuerdos((prev) => prev.map((a) => (a.id === id ? updated : a)));
+      return updated;
+    }
+
+    // Partial update (e.g. advancing dia_corte from registrarPago)
     const dbObj = {};
-    if (dataObj.clienteId !== undefined) dbObj.cliente_id = dataObj.clienteId;
     if (dataObj.frecuencia !== undefined) dbObj.frecuencia = dataObj.frecuencia;
     if (dataObj.montoCuota !== undefined) dbObj.monto_cuota = Number(dataObj.montoCuota);
-    if (dataObj.fechaInicio !== undefined || dataObj.diaCorte !== undefined || dataObj.fechaProximoPago !== undefined) {
-      dbObj.dia_corte = dataObj.fechaInicio || dataObj.diaCorte || dataObj.fechaProximoPago;
-    }
+    if (dataObj.diaCorte !== undefined) dbObj.dia_corte = dataObj.diaCorte;
+    if (dataObj.fechasEspecificas !== undefined) dbObj.fechas_especificas = dataObj.fechasEspecificas;
+
+    if (Object.keys(dbObj).length === 0) return;
 
     const { data, error } = await supabase
       .from('acuerdos_pago')
@@ -330,16 +378,16 @@ export function StoreProvider({ children }) {
       return { ...c, montoAdeudado: Math.max(0, c.montoAdeudado - montoAbonado) };
     }));
 
-    // Advance next payment date on the agreement
+    // Advance next payment date on the agreement (only for fixed frequencies)
     const acuerdo = acuerdos.find((a) => a.clienteId === pago.clienteId);
-    if (acuerdo) {
+    if (acuerdo && acuerdo.frecuencia !== 'Personalizado') {
       const next = new Date(acuerdo.fechaProximoPago + 'T12:00:00');
       if (acuerdo.frecuencia === 'Mensual') next.setMonth(next.getMonth() + 1);
       else if (acuerdo.frecuencia === 'Quincenal') next.setDate(next.getDate() + 15);
       else if (acuerdo.frecuencia === 'Semanal') next.setDate(next.getDate() + 7);
 
       await actualizarAcuerdo(acuerdo.id, {
-        fechaProximoPago: next.toISOString().split('T')[0],
+        diaCorte: next.getDate(),
       });
     }
 

@@ -2,11 +2,13 @@ import { useState, useMemo } from 'react';
 import {
   CalendarDays,
   CalendarClock,
+  CalendarPlus,
   ClipboardList,
   Plus,
   Repeat,
   LayoutGrid,
   List,
+  Trash2,
 } from 'lucide-react';
 import { useStore, calcularProximasFechas } from '../data/useStore';
 import { formatCurrency, formatDate } from '../utils/helpers';
@@ -18,6 +20,7 @@ export default function Acuerdos() {
   const [frecuencia, setFrecuencia] = useState('Mensual');
   const [montoCuota, setMontoCuota] = useState('');
   const [fechaInicio, setFechaInicio] = useState(new Date().toISOString().split('T')[0]);
+  const [fechasPersonalizadas, setFechasPersonalizadas] = useState(['']);
   const [editingId, setEditingId] = useState(null);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
 
@@ -33,12 +36,15 @@ export default function Acuerdos() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const isCustom = frecuencia === 'Personalizado';
+    const cleanFechas = fechasPersonalizadas.filter(f => f.trim() !== '');
     const data = {
       clienteId: selectedCliente,
       frecuencia,
       montoCuota: parseFloat(montoCuota),
-      fechaInicio,
-      fechaProximoPago: proximasFechas[0] || fechaInicio,
+      fechaInicio: isCustom ? undefined : fechaInicio,
+      fechaProximoPago: isCustom ? undefined : (proximasFechas[0] || fechaInicio),
+      fechasEspecificas: isCustom ? cleanFechas : null,
     };
     if (editingId) {
       actualizarAcuerdo(editingId, data);
@@ -54,6 +60,7 @@ export default function Acuerdos() {
     setFrecuencia('Mensual');
     setMontoCuota('');
     setFechaInicio(new Date().toISOString().split('T')[0]);
+    setFechasPersonalizadas(['']);
     setEditingId(null);
   };
 
@@ -62,14 +69,23 @@ export default function Acuerdos() {
     setSelectedCliente(acuerdo.clienteId);
     setFrecuencia(acuerdo.frecuencia);
     setMontoCuota(String(acuerdo.montoCuota));
-    setFechaInicio(acuerdo.fechaInicio);
+    if (acuerdo.frecuencia === 'Personalizado') {
+      setFechasPersonalizadas(acuerdo.fechasEspecificas && acuerdo.fechasEspecificas.length > 0 ? [...acuerdo.fechasEspecificas] : ['']);
+    } else {
+      setFechaInicio(acuerdo.fechaProximoPago || new Date().toISOString().split('T')[0]);
+    }
     setShowForm(true);
   };
+
+  const addFechaPersonalizada = () => setFechasPersonalizadas(prev => [...prev, '']);
+  const removeFechaPersonalizada = (index) => setFechasPersonalizadas(prev => prev.filter((_, i) => i !== index));
+  const updateFechaPersonalizada = (index, value) => setFechasPersonalizadas(prev => prev.map((f, i) => i === index ? value : f));
 
   const freqConfig = {
     Mensual: { color: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500', icon: CalendarDays },
     Quincenal: { color: 'bg-violet-100 text-violet-700', dot: 'bg-violet-500', icon: CalendarClock },
     Semanal: { color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500', icon: Repeat },
+    Personalizado: { color: 'bg-amber-100 text-amber-700', dot: 'bg-amber-500', icon: CalendarPlus },
   };
 
   return (
@@ -144,6 +160,7 @@ export default function Acuerdos() {
                 <option value="Mensual">Mensual</option>
                 <option value="Quincenal">Quincenal</option>
                 <option value="Semanal">Semanal</option>
+                <option value="Personalizado">Personalizado</option>
               </select>
             </div>
             <div>
@@ -159,19 +176,62 @@ export default function Acuerdos() {
                 placeholder="0.00"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Inicio</label>
-              <input
-                type="date"
-                value={fechaInicio}
-                onChange={(e) => setFechaInicio(e.target.value)}
-                required
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-zen-500 focus:ring-2 focus:ring-zen-500/20 outline-none transition-all text-sm"
-              />
-            </div>
+            {frecuencia !== 'Personalizado' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Inicio</label>
+                <input
+                  type="date"
+                  value={fechaInicio}
+                  onChange={(e) => setFechaInicio(e.target.value)}
+                  required
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-zen-500 focus:ring-2 focus:ring-zen-500/20 outline-none transition-all text-sm"
+                />
+              </div>
+            )}
           </div>
 
-          {proximasFechas.length > 0 && (
+          {/* Custom dates for Personalizado */}
+          {frecuencia === 'Personalizado' && (
+            <div className="mt-4 p-4 bg-amber-50 rounded-xl border border-amber-100">
+              <p className="text-sm font-medium text-amber-800 mb-3 flex items-center gap-2">
+                <CalendarPlus size={16} />
+                Fechas de Pago Personalizadas
+              </p>
+              <div className="space-y-2">
+                {fechasPersonalizadas.map((fecha, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      value={fecha}
+                      onChange={(e) => updateFechaPersonalizada(index, e.target.value)}
+                      required
+                      className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 focus:border-zen-500 focus:ring-2 focus:ring-zen-500/20 outline-none transition-all text-sm bg-white"
+                    />
+                    {fechasPersonalizadas.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeFechaPersonalizada(index)}
+                        className="p-2 rounded-lg hover:bg-red-100 text-red-500 transition-colors"
+                        title="Eliminar fecha"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={addFechaPersonalizada}
+                className="mt-3 flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-amber-700 bg-white hover:bg-amber-50 rounded-xl border border-amber-200 transition-colors"
+              >
+                <Plus size={16} />
+                Agregar otra fecha
+              </button>
+            </div>
+          )}
+
+          {frecuencia !== 'Personalizado' && proximasFechas.length > 0 && (
             <div className="mt-4 p-4 bg-zen-50 rounded-xl border border-zen-100">
               <p className="text-sm font-medium text-zen-800 mb-2 flex items-center gap-2">
                 <CalendarClock size={16} />
@@ -206,7 +266,9 @@ export default function Acuerdos() {
             if (!cliente) return null;
             const cfg = freqConfig[acuerdo.frecuencia] || freqConfig.Mensual;
             const FreqIcon = cfg.icon;
-            const proximas = calcularProximasFechas(acuerdo.fechaProximoPago, acuerdo.frecuencia, 3);
+            const proximas = acuerdo.frecuencia === 'Personalizado'
+              ? (acuerdo.fechasEspecificas || []).sort()
+              : calcularProximasFechas(acuerdo.fechaProximoPago, acuerdo.frecuencia, 3);
 
             return (
               <div key={acuerdo.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
@@ -283,7 +345,9 @@ export default function Acuerdos() {
                   const cliente = clientes.find((c) => c.id === acuerdo.clienteId);
                   if (!cliente) return null;
                   const cfg = freqConfig[acuerdo.frecuencia] || freqConfig.Mensual;
-                  const proximas = calcularProximasFechas(acuerdo.fechaProximoPago, acuerdo.frecuencia, 3);
+                  const proximas = acuerdo.frecuencia === 'Personalizado'
+                    ? (acuerdo.fechasEspecificas || []).sort()
+                    : calcularProximasFechas(acuerdo.fechaProximoPago, acuerdo.frecuencia, 3);
 
                   return (
                     <tr key={acuerdo.id} className="hover:bg-zen-50/30 transition-colors">
