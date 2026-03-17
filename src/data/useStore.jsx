@@ -1,11 +1,8 @@
-import { createContext, useContext, useState, useCallback } from 'react';
-import { initialClientes, initialAcuerdos, initialPagos } from './mockData';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 const StoreContext = createContext(null);
 
-// Helper: generate unique IDs (replace with Supabase auto-IDs later)
-let idCounter = 100;
-const genId = (prefix) => `${prefix}${++idCounter}`;
 
 // Helper: calculate next payment date based on frequency
 export function calcularProximasFechas(fechaInicio, frecuencia, cantidad = 6) {
@@ -22,76 +19,182 @@ export function calcularProximasFechas(fechaInicio, frecuencia, cantidad = 6) {
 }
 
 export function StoreProvider({ children }) {
-  const [clientes, setClientes] = useState(initialClientes);
-  const [acuerdos, setAcuerdos] = useState(initialAcuerdos);
-  const [pagos, setPagos] = useState(initialPagos);
+  const [clientes, setClientes] = useState([]);
+  const [acuerdos, setAcuerdos] = useState([]);
+  const [pagos, setPagos] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [
+        { data: cData, error: cErr },
+        { data: aData, error: aErr },
+        { data: pData, error: pErr },
+      ] = await Promise.all([
+        supabase.from('clientes').select('*'),
+        supabase.from('acuerdos_pago').select('*'),
+        supabase.from('pagos').select('*').order('fecha', { ascending: false }),
+      ]);
+
+      if (cErr) console.error('Error fetching clientes:', cErr);
+      if (aErr) console.error('Error fetching acuerdos:', aErr);
+      if (pErr) console.error('Error fetching pagos:', pErr);
+
+      setClientes(cData || []);
+      setAcuerdos(aData || []);
+      setPagos(pData || []);
+    } catch (e) {
+      console.error('Error in loadData:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // ----- Clientes CRUD -----
-  const agregarCliente = useCallback((cliente) => {
-    const nuevo = { ...cliente, id: genId('c'), fechaRegistro: new Date().toISOString().split('T')[0] };
-    setClientes((prev) => [...prev, nuevo]);
-    return nuevo;
+  const agregarCliente = useCallback(async (cliente) => {
+    // We add fechaRegistro dynamically in the client, or let DB handle it. Assuming client.
+    const nuevCliente = { 
+      ...cliente, 
+      fechaRegistro: new Date().toISOString().split('T')[0] 
+    };
+
+    const { data, error } = await supabase
+      .from('clientes')
+      .insert([nuevCliente])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding cliente:', error);
+      return null;
+    }
+    setClientes((prev) => [...prev, data]);
+    return data;
   }, []);
 
-  const actualizarCliente = useCallback((id, data) => {
-    setClientes((prev) => prev.map((c) => (c.id === id ? { ...c, ...data } : c)));
+  const actualizarCliente = useCallback(async (id, dataObj) => {
+    const { data, error } = await supabase
+      .from('clientes')
+      .update(dataObj)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating cliente:', error);
+      return null;
+    }
+    setClientes((prev) => prev.map((c) => (c.id === id ? data : c)));
+    return data;
   }, []);
 
-  const eliminarCliente = useCallback((id) => {
+  const eliminarCliente = useCallback(async (id) => {
+    // It's possible we need to delete agreements and payments first if there are no cascading deletes.
+    await supabase.from('pagos').delete().eq('clienteId', id);
+    await supabase.from('acuerdos_pago').delete().eq('clienteId', id);
+    const { error } = await supabase.from('clientes').delete().eq('id', id);
+
+    if (error) {
+      console.error('Error deleting cliente:', error);
+      return false;
+    }
     setClientes((prev) => prev.filter((c) => c.id !== id));
     setAcuerdos((prev) => prev.filter((a) => a.clienteId !== id));
     setPagos((prev) => prev.filter((p) => p.clienteId !== id));
+    return true;
   }, []);
 
   // ----- Acuerdos CRUD -----
-  const agregarAcuerdo = useCallback((acuerdo) => {
-    const nuevo = { ...acuerdo, id: genId('a'), estado: 'Activo' };
-    setAcuerdos((prev) => [...prev, nuevo]);
-    return nuevo;
+  const agregarAcuerdo = useCallback(async (acuerdo) => {
+    const nuevoAcuerdo = { ...acuerdo, estado: 'Activo' };
+    const { data, error } = await supabase
+      .from('acuerdos_pago')
+      .insert([nuevoAcuerdo])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding acuerdo:', error);
+      return null;
+    }
+    setAcuerdos((prev) => [...prev, data]);
+    return data;
   }, []);
 
-  const actualizarAcuerdo = useCallback((id, data) => {
-    setAcuerdos((prev) => prev.map((a) => (a.id === id ? { ...a, ...data } : a)));
+  const actualizarAcuerdo = useCallback(async (id, dataObj) => {
+    const { data, error } = await supabase
+      .from('acuerdos_pago')
+      .update(dataObj)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating acuerdo:', error);
+      return null;
+    }
+    setAcuerdos((prev) => prev.map((a) => (a.id === id ? data : a)));
+    return data;
   }, []);
 
   // ----- Pagos -----
-  const registrarPago = useCallback((pago) => {
-    const nuevo = { ...pago, id: genId('p'), fecha: new Date().toISOString().split('T')[0] };
-    setPagos((prev) => [...prev, nuevo]);
+  const registrarPago = useCallback(async (pago) => {
+    const nuevoPago = { ...pago, fecha: new Date().toISOString().split('T')[0] };
+    
+    const { data, error } = await supabase
+      .from('pagos')
+      .insert([nuevoPago])
+      .select()
+      .single();
 
-    // Update client balance
-    setClientes((prev) =>
-      prev.map((c) =>
-        c.id === pago.clienteId
-          ? { ...c, montoAdeudado: Math.max(0, c.montoAdeudado - pago.monto) }
-          : c
-      )
-    );
+    if (error) {
+      console.error('Error recording payment:', error);
+      return null;
+    }
+    
+    // Refresh all data to ensure we have the correct balances if triggering logic exists on DB,
+    // otherwise update local state optimistically.
+    setPagos((prev) => [data, ...prev]);
+
+    // Update client balance in DB
+    const cliente = clientes.find((c) => c.id === pago.clienteId);
+    if (cliente) {
+      const newBalance = Math.max(0, cliente.montoAdeudado - pago.monto);
+      await actualizarCliente(cliente.id, { montoAdeudado: newBalance });
+    }
 
     // Advance next payment date on the agreement
-    setAcuerdos((prev) =>
-      prev.map((a) => {
-        if (a.clienteId !== pago.clienteId) return a;
-        const next = new Date(a.fechaProximoPago + 'T12:00:00');
-        if (a.frecuencia === 'Mensual') next.setMonth(next.getMonth() + 1);
-        else if (a.frecuencia === 'Quincenal') next.setDate(next.getDate() + 15);
-        else if (a.frecuencia === 'Semanal') next.setDate(next.getDate() + 7);
-        return { ...a, fechaProximoPago: next.toISOString().split('T')[0] };
-      })
-    );
+    const acuerdo = acuerdos.find((a) => a.clienteId === pago.clienteId);
+    if (acuerdo) {
+      const next = new Date(acuerdo.fechaProximoPago + 'T12:00:00');
+      if (acuerdo.frecuencia === 'Mensual') next.setMonth(next.getMonth() + 1);
+      else if (acuerdo.frecuencia === 'Quincenal') next.setDate(next.getDate() + 15);
+      else if (acuerdo.frecuencia === 'Semanal') next.setDate(next.getDate() + 7);
+      
+      await actualizarAcuerdo(acuerdo.id, { 
+        fechaProximoPago: next.toISOString().split('T')[0] 
+      });
+    }
 
-    return nuevo;
-  }, []);
+    return data;
+  }, [clientes, acuerdos, actualizarCliente, actualizarAcuerdo]);
 
   // ----- Queries -----
-  const getCliente = useCallback((id) => clientes.find((c) => c.id === id), [clientes]);
-  const getAcuerdoByCliente = useCallback((clienteId) => acuerdos.find((a) => a.clienteId === clienteId), [acuerdos]);
-  const getPagosByCliente = useCallback((clienteId) => pagos.filter((p) => p.clienteId === clienteId).sort((a, b) => a.fecha.localeCompare(b.fecha)), [pagos]);
+  const getCliente = useCallback((id) => clientes.find((c) => c.id === id) || clientes.find((c) => c.id == id), [clientes]);
+  const getAcuerdoByCliente = useCallback((clienteId) => acuerdos.find((a) => a.clienteId === clienteId) || acuerdos.find((a) => a.clienteId == clienteId), [acuerdos]);
+  const getPagosByCliente = useCallback((clienteId) => pagos.filter((p) => p.clienteId === clienteId || p.clienteId == clienteId).sort((a, b) => a.fecha.localeCompare(b.fecha)), [pagos]);
 
   const value = {
     clientes,
     acuerdos,
     pagos,
+    loading,
+    refetch: loadData,
     agregarCliente,
     actualizarCliente,
     eliminarCliente,
