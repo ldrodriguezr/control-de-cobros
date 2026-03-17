@@ -6,6 +6,7 @@ import Clientes from './pages/Clientes';
 import Acuerdos from './pages/Acuerdos';
 import Pagos from './pages/Pagos';
 import EstadoCuenta from './pages/EstadoCuenta';
+import Comisiones from './pages/Comisiones';
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
             <Route path="pagos" element={<Pagos />} />
             <Route path="estados" element={<EstadoCuenta />} />
             <Route path="estados/:id" element={<EstadoCuenta />} />
+            <Route path="comisiones" element={<Comisiones />} />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -1,17 +1,15 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   FileText,
   ArrowLeft,
   Printer,
-  User,
   Building,
-  Phone,
-  CreditCard,
   Calendar,
-  DollarSign,
+  CreditCard,
   TrendingDown,
   ChevronRight,
+  Search,
 } from 'lucide-react';
 import { useStore } from '../data/useStore';
 import { formatCurrency, formatDate } from '../utils/helpers';
@@ -21,7 +19,6 @@ export default function EstadoCuenta() {
   const navigate = useNavigate();
   const { clientes, getCliente, getPagosByCliente, getAcuerdoByCliente } = useStore();
 
-  // If no ID, show the client selector
   if (!id) {
     return <ClientSelector clientes={clientes} />;
   }
@@ -45,7 +42,6 @@ export default function EstadoCuenta() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
       <div className="flex items-center gap-4 no-print">
         <button onClick={() => navigate('/estados')} className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
           <ArrowLeft size={22} className="text-gray-600" />
@@ -56,16 +52,15 @@ export default function EstadoCuenta() {
         </div>
         <button
           onClick={() => window.print()}
-          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-zen-600 to-zen-700 text-white rounded-xl font-medium shadow-lg shadow-zen-600/25 hover:shadow-xl hover:shadow-zen-600/30 transition-all hover:-translate-y-0.5"
+          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-zen-600 to-zen-700 text-white rounded-xl font-medium shadow-lg shadow-zen-600/25 hover:shadow-xl transition-all hover:-translate-y-0.5"
         >
           <Printer size={18} />
           <span className="hidden sm:inline">Imprimir / Exportar</span>
         </button>
       </div>
 
-      {/* Printable area */}
       <div className="print-area space-y-6">
-        {/* Client header card */}
+        {/* Client header */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="bg-gradient-to-r from-zen-800 to-zen-900 p-6 text-white">
             <div className="flex items-center gap-4 mb-4">
@@ -75,6 +70,7 @@ export default function EstadoCuenta() {
               <div>
                 <h2 className="text-xl font-bold">{cliente.nombre}</h2>
                 <p className="text-zen-200 text-sm">{cliente.cedula} · {cliente.telefono}</p>
+                {cliente.correo && <p className="text-zen-300 text-sm">{cliente.correo}</p>}
               </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -85,7 +81,6 @@ export default function EstadoCuenta() {
             </div>
           </div>
 
-          {/* Financial summary */}
           <div className="p-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-blue-50 rounded-xl p-4 text-center">
               <p className="text-xs text-blue-500 font-medium">Monto Original</p>
@@ -101,7 +96,6 @@ export default function EstadoCuenta() {
             </div>
           </div>
 
-          {/* Progress bar */}
           <div className="px-6 pb-6">
             <div className="flex items-center justify-between mb-2 text-sm">
               <span className="text-gray-600">Progreso de Pago</span>
@@ -116,7 +110,6 @@ export default function EstadoCuenta() {
           </div>
         </div>
 
-        {/* Extras */}
         {cliente.descripcionExtras && cliente.descripcionExtras !== 'Sin extras' && (
           <div className="bg-amber-50 rounded-2xl border border-amber-200 p-5">
             <p className="text-sm font-semibold text-amber-800 mb-1">Detalle de Extras y Cambios / Extras & Changes</p>
@@ -124,7 +117,6 @@ export default function EstadoCuenta() {
           </div>
         )}
 
-        {/* Payment history table */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
             <TrendingDown size={20} className="text-zen-600" />
@@ -149,9 +141,7 @@ export default function EstadoCuenta() {
                     <td className="px-5 py-3 text-gray-400">{i + 1}</td>
                     <td className="px-5 py-3 text-gray-700 font-medium">{formatDate(pago.fecha)}</td>
                     <td className="px-5 py-3">
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                        {pago.metodo}
-                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">{pago.metodo}</span>
                     </td>
                     <td className="px-5 py-3 text-right font-semibold text-green-600">{formatCurrency(pago.monto)}</td>
                     <td className="px-5 py-3 text-right font-semibold text-gray-900">{formatCurrency(pago.saldoPosterior)}</td>
@@ -160,9 +150,7 @@ export default function EstadoCuenta() {
                 ))}
                 {pagos.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-5 py-10 text-center text-gray-400">
-                      No se han registrado pagos
-                    </td>
+                    <td colSpan={6} className="px-5 py-10 text-center text-gray-400">No se han registrado pagos</td>
                   </tr>
                 )}
               </tbody>
@@ -170,7 +158,6 @@ export default function EstadoCuenta() {
           </div>
         </div>
 
-        {/* Footer */}
         <div className="text-center text-xs text-gray-400 py-4 border-t border-gray-100">
           <p>GRUPO ZEN — Estado de Cuenta generado el {formatDate(new Date().toISOString().split('T')[0])}</p>
           <p>Account Statement generated on {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
@@ -183,24 +170,46 @@ export default function EstadoCuenta() {
 function InfoPill({ icon: Icon, label, value }) {
   return (
     <div className="bg-white/10 rounded-xl px-3 py-2">
-      <p className="text-[11px] text-zen-300 flex items-center gap-1">
-        <Icon size={12} />
-        {label}
-      </p>
+      <p className="text-[11px] text-zen-300 flex items-center gap-1"><Icon size={12} />{label}</p>
       <p className="text-sm font-semibold">{value}</p>
     </div>
   );
 }
 
 function ClientSelector({ clientes }) {
+  const [search, setSearch] = useState('');
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    if (!q) return clientes;
+    return clientes.filter(
+      (c) =>
+        c.nombre.toLowerCase().includes(q) ||
+        c.cedula.toLowerCase().includes(q)
+    );
+  }, [clientes, search]);
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Estados de Cuenta</h1>
         <p className="text-gray-500 mt-1">Seleccione un cliente para ver su estado de cuenta</p>
       </div>
+
+      {/* Search bar */}
+      <div className="relative max-w-md">
+        <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Buscar por nombre o cédula..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:border-zen-500 focus:ring-2 focus:ring-zen-500/20 outline-none transition-all text-sm"
+        />
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {clientes.map((c) => (
+        {filtered.map((c) => (
           <Link
             key={c.id}
             to={`/estados/${c.id}`}
@@ -212,7 +221,8 @@ function ClientSelector({ clientes }) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-900 truncate group-hover:text-zen-700 transition-colors">{c.nombre}</p>
-                <p className="text-xs text-gray-500">{c.proyecto} · Casa {c.numeroCasa}</p>
+                <p className="text-xs text-gray-500">{c.cedula}</p>
+                <p className="text-xs text-gray-400">{c.proyecto} · Casa {c.numeroCasa}</p>
               </div>
               <ChevronRight size={20} className="text-gray-300 group-hover:text-zen-600 transition-colors shrink-0" />
             </div>
@@ -224,6 +234,12 @@ function ClientSelector({ clientes }) {
             </div>
           </Link>
         ))}
+        {filtered.length === 0 && (
+          <div className="col-span-3 text-center py-12 text-gray-400">
+            <Search size={36} className="mx-auto mb-2 opacity-40" />
+            <p>No se encontraron clientes con "{search}"</p>
+          </div>
+        )}
       </div>
     </div>
   );

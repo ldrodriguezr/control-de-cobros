@@ -37,6 +37,12 @@ export function StoreProvider({ children }) {
     setClientes((prev) => prev.map((c) => (c.id === id ? { ...c, ...data } : c)));
   }, []);
 
+  const eliminarCliente = useCallback((id) => {
+    setClientes((prev) => prev.filter((c) => c.id !== id));
+    setAcuerdos((prev) => prev.filter((a) => a.clienteId !== id));
+    setPagos((prev) => prev.filter((p) => p.clienteId !== id));
+  }, []);
+
   // ----- Acuerdos CRUD -----
   const agregarAcuerdo = useCallback((acuerdo) => {
     const nuevo = { ...acuerdo, id: genId('a'), estado: 'Activo' };
@@ -88,6 +94,7 @@ export function StoreProvider({ children }) {
     pagos,
     agregarCliente,
     actualizarCliente,
+    eliminarCliente,
     agregarAcuerdo,
     actualizarAcuerdo,
     registrarPago,

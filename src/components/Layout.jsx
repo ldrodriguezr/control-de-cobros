@@ -9,6 +9,7 @@ import {
   Menu,
   X,
   Building2,
+  Percent,
 } from 'lucide-react';
 
 const navItems = [
@@ -17,6 +18,7 @@ const navItems = [
   { to: '/acuerdos', label: 'Acuerdos de Pago', icon: ClipboardList },
   { to: '/pagos', label: 'Registro de Pagos', icon: CreditCard },
   { to: '/estados', label: 'Estados de Cuenta', icon: FileText },
+  { to: '/comisiones', label: 'Control de Comisiones', icon: Percent },
 ];
 
 export default function Layout() {

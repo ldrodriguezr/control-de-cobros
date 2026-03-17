@@ -6,7 +6,7 @@ import {
   CheckCircle2,
   Clock,
   DollarSign,
-  Send,
+  Mail,
   TrendingUp,
   Users,
 } from 'lucide-react';
@@ -52,10 +52,28 @@ export default function Dashboard() {
   const clientesActivos = clientes.length;
   const acuerdosActivos = acuerdos.filter((a) => a.estado === 'Activo').length;
 
-  const handleEnviarRecordatorio = (clienteId) => {
-    setSentReminders((prev) => ({ ...prev, [clienteId]: true }));
+  const buildMailtoLink = (cliente, acuerdo) => {
+    const subject = encodeURIComponent('Recordatorio de Pago - Grupo Zen');
+    const body = encodeURIComponent(
+      `Estimado/a ${cliente.nombre},\n\n` +
+      `Le escribimos de GRUPO ZEN para recordarle su próximo pago programado.\n\n` +
+      `Detalle:\n` +
+      `• Proyecto: ${cliente.proyecto}\n` +
+      `• Casa: ${cliente.numeroCasa}\n` +
+      `• Saldo Pendiente: ${formatCurrency(cliente.montoAdeudado)}\n` +
+      `• Monto de Cuota: ${formatCurrency(acuerdo.montoCuota)}\n` +
+      `• Fecha de Vencimiento: ${formatDate(acuerdo.fechaProximoPago)}\n\n` +
+      `Por favor, realice su pago a la brevedad posible.\n\n` +
+      `Atentamente,\nGRUPO ZEN\nDepartamento de Cobros`
+    );
+    return `mailto:${cliente.correo || ''}?subject=${subject}&body=${body}`;
+  };
+
+  const handleEnviarRecordatorio = (cliente, acuerdo) => {
+    window.open(buildMailtoLink(cliente, acuerdo), '_self');
+    setSentReminders((prev) => ({ ...prev, [cliente.id]: true }));
     setTimeout(() => {
-      setSentReminders((prev) => ({ ...prev, [clienteId]: false }));
+      setSentReminders((prev) => ({ ...prev, [cliente.id]: false }));
     }, 3000);
   };
 
@@ -116,7 +134,7 @@ export default function Dashboard() {
                 </span>
                 <span className="text-sm text-gray-400 hidden sm:block shrink-0 w-28 text-right">{formatDate(alerta.acuerdo.fechaProximoPago)}</span>
                 <button
-                  onClick={() => handleEnviarRecordatorio(alerta.cliente.id)}
+                  onClick={() => handleEnviarRecordatorio(alerta.cliente, alerta.acuerdo)}
                   disabled={sentReminders[alerta.cliente.id]}
                   className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                     sentReminders[alerta.cliente.id]
@@ -130,7 +148,7 @@ export default function Dashboard() {
                     </>
                   ) : (
                     <>
-                      <Send size={14} /> Recordatorio
+                      <Mail size={14} /> Recordatorio
                     </>
                   )}
                 </button>
@@ -178,7 +196,7 @@ function AlertSection({ title, items, tipo, config, sentReminders, onSend, empty
                 <p className="text-xs text-gray-500">{formatCurrency(a.acuerdo.montoCuota)} · {formatDate(a.acuerdo.fechaProximoPago)}</p>
               </div>
               <button
-                onClick={() => onSend(a.cliente.id)}
+                onClick={() => onSend(a.cliente, a.acuerdo)}
                 disabled={sentReminders[a.cliente.id]}
                 className={`p-2 rounded-lg transition-all ${
                   sentReminders[a.cliente.id]
@@ -186,7 +204,7 @@ function AlertSection({ title, items, tipo, config, sentReminders, onSend, empty
                     : 'bg-zen-600 text-white hover:bg-zen-700'
                 }`}
               >
-                {sentReminders[a.cliente.id] ? <CheckCircle2 size={16} /> : <Send size={16} />}
+                {sentReminders[a.cliente.id] ? <CheckCircle2 size={16} /> : <Mail size={16} />}
               </button>
             </div>
           ))

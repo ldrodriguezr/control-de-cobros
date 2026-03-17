@@ -9,6 +9,10 @@ import {
   ChevronDown,
   ChevronUp,
   FileText,
+  Edit,
+  Trash2,
+  Mail,
+  X,
 } from 'lucide-react';
 import { useStore } from '../data/useStore';
 import { formatCurrency, formatDate } from '../utils/helpers';
@@ -18,6 +22,7 @@ const emptyForm = {
   nombre: '',
   cedula: '',
   telefono: '',
+  correo: '',
   proyecto: '',
   numeroCasa: '',
   montoAdeudado: '',
@@ -25,13 +30,15 @@ const emptyForm = {
 };
 
 export default function Clientes() {
-  const { clientes, agregarCliente, getAcuerdoByCliente } = useStore();
+  const { clientes, agregarCliente, actualizarCliente, eliminarCliente, getAcuerdoByCliente } = useStore();
   const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [editingId, setEditingId] = useState(null);
   const [search, setSearch] = useState('');
   const [sortField, setSortField] = useState('nombre');
   const [sortDir, setSortDir] = useState('asc');
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   const filtered = useMemo(() => {
     let list = clientes.filter(
@@ -64,13 +71,56 @@ export default function Clientes() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    agregarCliente({
-      ...form,
-      montoOriginal: parseFloat(form.montoAdeudado) || 0,
-      montoAdeudado: parseFloat(form.montoAdeudado) || 0,
-    });
+    if (editingId) {
+      actualizarCliente(editingId, {
+        nombre: form.nombre,
+        cedula: form.cedula,
+        telefono: form.telefono,
+        correo: form.correo,
+        proyecto: form.proyecto,
+        numeroCasa: form.numeroCasa,
+        descripcionExtras: form.descripcionExtras,
+        ...(editingId ? {} : {
+          montoOriginal: parseFloat(form.montoAdeudado) || 0,
+          montoAdeudado: parseFloat(form.montoAdeudado) || 0,
+        }),
+      });
+    } else {
+      agregarCliente({
+        ...form,
+        montoOriginal: parseFloat(form.montoAdeudado) || 0,
+        montoAdeudado: parseFloat(form.montoAdeudado) || 0,
+      });
+    }
     setForm(emptyForm);
     setShowForm(false);
+    setEditingId(null);
+  };
+
+  const handleEdit = (cliente) => {
+    setEditingId(cliente.id);
+    setForm({
+      nombre: cliente.nombre,
+      cedula: cliente.cedula,
+      telefono: cliente.telefono,
+      correo: cliente.correo || '',
+      proyecto: cliente.proyecto,
+      numeroCasa: cliente.numeroCasa,
+      montoAdeudado: String(cliente.montoAdeudado),
+      descripcionExtras: cliente.descripcionExtras,
+    });
+    setShowForm(true);
+  };
+
+  const handleDelete = (id) => {
+    eliminarCliente(id);
+    setDeleteConfirm(null);
+  };
+
+  const handleCancelForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setForm(emptyForm);
   };
 
   const handleChange = (e) => {
@@ -86,7 +136,7 @@ export default function Clientes() {
           <p className="text-gray-500 mt-1">Gestión y registro de clientes</p>
         </div>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => { handleCancelForm(); setShowForm(true); }}
           className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-zen-600 to-zen-700 text-white rounded-xl font-medium shadow-lg shadow-zen-600/25 hover:shadow-xl hover:shadow-zen-600/30 transition-all hover:-translate-y-0.5"
         >
           <UserPlus size={20} />
@@ -98,16 +148,19 @@ export default function Clientes() {
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-in">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <UserPlus size={20} className="text-zen-600" />
-            Registrar Nuevo Cliente
+            {editingId ? <Edit size={20} className="text-zen-600" /> : <UserPlus size={20} className="text-zen-600" />}
+            {editingId ? 'Editar Cliente' : 'Registrar Nuevo Cliente'}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <InputField label="Nombre del Cliente" name="nombre" value={form.nombre} onChange={handleChange} icon={Users} required />
             <InputField label="Cédula o Pasaporte" name="cedula" value={form.cedula} onChange={handleChange} icon={CreditCard} required />
             <InputField label="Teléfono" name="telefono" value={form.telefono} onChange={handleChange} icon={Phone} />
+            <InputField label="Correo Electrónico" name="correo" value={form.correo} onChange={handleChange} icon={Mail} type="email" required />
             <InputField label="Proyecto" name="proyecto" value={form.proyecto} onChange={handleChange} icon={Building} required />
             <InputField label="Número de Casa" name="numeroCasa" value={form.numeroCasa} onChange={handleChange} icon={Building} required />
-            <InputField label="Monto Adeudado ($)" name="montoAdeudado" value={form.montoAdeudado} onChange={handleChange} icon={CreditCard} type="number" required />
+            {!editingId && (
+              <InputField label="Monto Adeudado ($)" name="montoAdeudado" value={form.montoAdeudado} onChange={handleChange} icon={CreditCard} type="number" required />
+            )}
           </div>
           <div className="mt-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">Descripción de Extras</label>
@@ -121,14 +174,14 @@ export default function Clientes() {
             />
           </div>
           <div className="mt-5 flex justify-end gap-3">
-            <button type="button" onClick={() => setShowForm(false)} className="px-5 py-2.5 rounded-xl text-gray-600 hover:bg-gray-100 font-medium text-sm transition-colors">
+            <button type="button" onClick={handleCancelForm} className="px-5 py-2.5 rounded-xl text-gray-600 hover:bg-gray-100 font-medium text-sm transition-colors">
               Cancelar
             </button>
             <button
               type="submit"
               className="px-6 py-2.5 bg-gradient-to-r from-zen-600 to-zen-700 text-white rounded-xl font-medium shadow-lg shadow-zen-600/25 hover:shadow-xl transition-all text-sm"
             >
-              Guardar Cliente
+              {editingId ? 'Actualizar Cliente' : 'Guardar Cliente'}
             </button>
           </div>
         </form>
@@ -170,7 +223,7 @@ export default function Clientes() {
                   </th>
                 ))}
                 <th className="px-5 py-3 text-left font-semibold text-gray-600">Acuerdo</th>
-                <th className="px-5 py-3"></th>
+                <th className="px-5 py-3 text-right font-semibold text-gray-600">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -180,7 +233,7 @@ export default function Clientes() {
                   <tr key={c.id} className="hover:bg-zen-50/30 transition-colors">
                     <td className="px-5 py-3.5">
                       <p className="font-semibold text-gray-900">{c.nombre}</p>
-                      <p className="text-xs text-gray-400">{c.telefono}</p>
+                      <p className="text-xs text-gray-400">{c.telefono} {c.correo && `· ${c.correo}`}</p>
                     </td>
                     <td className="px-5 py-3.5 text-gray-600">{c.cedula}</td>
                     <td className="px-5 py-3.5 text-gray-600">{c.proyecto}</td>
@@ -202,13 +255,29 @@ export default function Clientes() {
                       )}
                     </td>
                     <td className="px-5 py-3.5">
-                      <button
-                        onClick={() => navigate(`/estados/${c.id}`)}
-                        className="p-2 rounded-lg hover:bg-zen-50 text-zen-600 transition-colors"
-                        title="Ver estado de cuenta"
-                      >
-                        <FileText size={18} />
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => navigate(`/estados/${c.id}`)}
+                          className="p-2 rounded-lg hover:bg-zen-50 text-zen-600 transition-colors"
+                          title="Ver estado de cuenta"
+                        >
+                          <FileText size={17} />
+                        </button>
+                        <button
+                          onClick={() => handleEdit(c)}
+                          className="p-2 rounded-lg hover:bg-amber-50 text-amber-600 transition-colors"
+                          title="Editar cliente"
+                        >
+                          <Edit size={17} />
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirm(c.id)}
+                          className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
+                          title="Eliminar cliente"
+                        >
+                          <Trash2 size={17} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -224,6 +293,31 @@ export default function Clientes() {
           </table>
         </div>
       </div>
+
+      {/* Delete confirmation modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in" onClick={() => setDeleteConfirm(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-slide-in" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
+                <Trash2 size={20} className="text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Eliminar Cliente</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-5">
+              ¿Está seguro que desea eliminar este cliente? Esta acción también eliminará sus acuerdos de pago e historial de pagos. No se puede deshacer.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-2.5 rounded-xl text-gray-600 hover:bg-gray-100 font-medium text-sm transition-colors border border-gray-200">
+                Cancelar
+              </button>
+              <button onClick={() => handleDelete(deleteConfirm)} className="flex-1 py-2.5 bg-red-600 text-white rounded-xl font-medium text-sm hover:bg-red-700 transition-colors shadow-lg shadow-red-600/25">
+                Sí, Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
