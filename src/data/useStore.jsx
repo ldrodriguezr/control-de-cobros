@@ -37,6 +37,16 @@ function mapClienteToDb(ui) {
   };
 }
 
+function diaCorteToFecha(diaCorte) {
+  // dia_corte is an INT (1-31). Build a date for the current month/year.
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth(); // 0-indexed
+  const day = Math.min(Number(diaCorte), 28); // cap at 28 to avoid Feb overflow
+  const d = new Date(year, month, day);
+  return d.toISOString().split('T')[0]; // → 'YYYY-MM-DD'
+}
+
 function mapAcuerdoFromDb(a) {
   return {
     id: a.id,
@@ -44,7 +54,7 @@ function mapAcuerdoFromDb(a) {
     frecuencia: a.frecuencia,
     montoCuota: Number(a.monto_cuota || 0),
     diaCorte: a.dia_corte,
-    fechaProximoPago: a.dia_corte, // use dia_corte as the "próximo pago" reference
+    fechaProximoPago: diaCorteToFecha(a.dia_corte),
     estado: a.estado || 'Activo',
     createdAt: a.created_at,
   };
