@@ -51,11 +51,17 @@ function mapAcuerdoFromDb(a) {
 }
 
 function mapAcuerdoToDb(ui) {
+  // dia_corte is an INT (1-31): extract the day number from the date string
+  const rawDate = ui.fechaInicio || ui.diaCorte || ui.fechaProximoPago;
+  let diaCorte = rawDate;
+  if (typeof rawDate === 'string' && rawDate.includes('-')) {
+    diaCorte = new Date(rawDate + 'T12:00:00').getDate(); // e.g. '2026-03-17' → 17
+  }
   return {
     cliente_id: ui.clienteId,
     frecuencia: ui.frecuencia,
     monto_cuota: Number(ui.montoCuota || 0),
-    dia_corte: ui.fechaInicio || ui.diaCorte || ui.fechaProximoPago,
+    dia_corte: Number(diaCorte),
   };
 }
 
@@ -292,8 +298,6 @@ export function StoreProvider({ children }) {
       monto_abonado: montoAbonado,
       comision_generada: comisionGenerada,
       saldo_restante_momento_pago: saldoRestante,
-      metodo: pago.metodo || '',
-      notas: pago.notas || '',
     };
 
     const { data, error } = await supabase
