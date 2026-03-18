@@ -41,13 +41,13 @@ export default function Pagos() {
     setShowPayModal(true);
   };
 
-  const handlePay = (e) => {
+  const handlePay = async (e) => {
     e.preventDefault();
     const monto = parseFloat(payForm.monto);
     if (!monto || monto <= 0) return;
 
     const saldoPosterior = Math.max(0, selectedCliente.montoAdeudado - monto);
-    const pago = registrarPago({
+    const nuevoPago = await registrarPago({
       clienteId: selectedCliente.id,
       monto,
       saldoPosterior,
@@ -55,16 +55,22 @@ export default function Pagos() {
       notas: payForm.notas,
     });
 
+    if (!nuevoPago) return; // Fail safe
+
     setShowPayModal(false);
     setShowRecibo({
-      ...pago,
+      id: nuevoPago.id,
+      fecha: nuevoPago.fecha,
+      monto: nuevoPago.monto,
+      saldoPosterior: nuevoPago.saldoPosterior,
+      metodo: payForm.metodo,
+      // Client info for receipt
       clienteNombre: selectedCliente.nombre,
       clienteCedula: selectedCliente.cedula,
       proyecto: selectedCliente.proyecto,
       numeroCasa: selectedCliente.numeroCasa,
       descripcionExtras: selectedCliente.descripcionExtras,
       montoAnterior: selectedCliente.montoAdeudado,
-      saldoPosterior,
     });
 
     setSuccessMsg(`Pago de ${formatCurrency(monto)} registrado exitosamente`);
@@ -76,7 +82,9 @@ export default function Pagos() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <>
+    {/* APP WEB UI */}
+    <div className="space-y-6 animate-fade-in print:hidden">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Registro de Pagos</h1>
@@ -339,23 +347,21 @@ export default function Pagos() {
         </div>
       )}
 
-      {/* Receipt Modal */}
+      {/* Receipt Modal (Web Preview) */}
       {showRecibo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in" onClick={() => setShowRecibo(null)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg animate-slide-in" onClick={(e) => e.stopPropagation()}>
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between no-print">
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 <Receipt size={20} className="text-zen-600" />
-                Recibo de Pago / Receipt of Payment
+                Recibo de Pago
               </h3>
               <button onClick={() => setShowRecibo(null)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
                 <X size={20} className="text-gray-400" />
               </button>
             </div>
 
-            {/* Printable receipt */}
-            <div className="print-area p-6 space-y-5">
-              {/* Header */}
+            <div className="p-6 space-y-5">
               <div className="text-center border-b border-gray-200 pb-4">
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <Building2 size={28} className="text-zen-700" />
@@ -365,55 +371,14 @@ export default function Pagos() {
                 <p className="text-sm text-gray-500 mt-1">No. {showRecibo.id} · {formatDate(showRecibo.fecha)}</p>
               </div>
 
-              {/* Client info */}
-              <div className="grid grid-cols-2 gap-4 text-sm print:hidden">
-                <div>
-                  <p className="text-gray-500">Cliente / Client</p>
-                  <p className="font-semibold text-gray-900">{showRecibo.clienteNombre}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Cédula / ID</p>
-                  <p className="font-semibold text-gray-900">{showRecibo.clienteCedula}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Proyecto / Project</p>
-                  <p className="font-semibold text-gray-900">{showRecibo.proyecto}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Casa / House No.</p>
-                  <p className="font-semibold text-gray-900">{showRecibo.numeroCasa}</p>
-                </div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div><p className="text-gray-500">Cliente / Client</p><p className="font-semibold text-gray-900">{showRecibo.clienteNombre}</p></div>
+                <div><p className="text-gray-500">Cédula / ID</p><p className="font-semibold text-gray-900">{showRecibo.clienteCedula}</p></div>
+                <div><p className="text-gray-500">Proyecto / Project</p><p className="font-semibold text-gray-900">{showRecibo.proyecto}</p></div>
+                <div><p className="text-gray-500">Casa / House No.</p><p className="font-semibold text-gray-900">{showRecibo.numeroCasa}</p></div>
               </div>
 
-              {/* Client info (Print Layout) */}
-              <table className="hidden print:table w-full text-sm mb-6 border-collapse">
-                <tbody>
-                  <tr>
-                    <td className="py-2 border-b border-gray-100 w-1/2 align-top">
-                      <p className="text-gray-500 text-xs mb-1">Cliente / Client</p>
-                      <p className="font-semibold text-gray-900">{showRecibo.clienteNombre}</p>
-                    </td>
-                    <td className="py-2 border-b border-gray-100 w-1/2 align-top pl-4">
-                      <p className="text-gray-500 text-xs mb-1">Cédula / ID</p>
-                      <p className="font-semibold text-gray-900">{showRecibo.clienteCedula}</p>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="py-2 border-b border-gray-100 w-1/2 align-top pt-3">
-                      <p className="text-gray-500 text-xs mb-1">Proyecto / Project</p>
-                      <p className="font-semibold text-gray-900">{showRecibo.proyecto}</p>
-                    </td>
-                    <td className="py-2 border-b border-gray-100 w-1/2 align-top pl-4 pt-3">
-                      <p className="text-gray-500 text-xs mb-1">Casa / House No.</p>
-                      <p className="font-semibold text-gray-900">{showRecibo.numeroCasa}</p>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-
-              {/* Amount details */}
-              {/* Amount details */}
-              <div className="bg-gray-50 rounded-xl p-4 space-y-3 print:hidden">
+              <div className="bg-gray-50 rounded-xl p-4 space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Saldo Anterior / Previous Balance</span>
                   <span className="font-semibold">{formatCurrency(showRecibo.montoAnterior)}</span>
@@ -428,52 +393,20 @@ export default function Pagos() {
                 </div>
               </div>
 
-              {/* Amount details (Print Layout) */}
-              <table className="hidden print:table w-full text-sm mb-6 border-collapse">
-                <tbody>
-                  <tr>
-                    <td className="py-2 text-gray-600 w-2/3 align-middle">Saldo Anterior / Previous Balance</td>
-                    <td className="py-2 text-right font-semibold w-1/3 align-middle">{formatCurrency(showRecibo.montoAnterior)}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2 text-gray-600 border-b border-gray-200 w-2/3 align-middle">Monto Abonado / Amount Paid</td>
-                    <td className="py-2 text-right font-bold text-green-600 border-b border-gray-200 w-1/3 align-middle">{formatCurrency(showRecibo.monto)}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 pt-4 font-semibold text-gray-900 w-2/3 align-middle border-b border-gray-200">Saldo Pendiente / Remaining Balance</td>
-                    <td className="py-3 pt-4 text-right text-base font-bold text-zen-700 w-1/3 align-middle border-b border-gray-200">{formatCurrency(showRecibo.saldoPosterior)}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 text-gray-500 w-2/3 align-middle">Método de Pago / Payment Method</td>
-                    <td className="py-3 text-right font-medium text-gray-900 w-1/3 align-middle">{showRecibo.metodo}</td>
-                  </tr>
-                </tbody>
-              </table>
-
-              {/* Extras */}
               {showRecibo.descripcionExtras && showRecibo.descripcionExtras !== 'Sin extras' && (
-                <div className="text-sm print:mt-6 print:break-inside-avoid">
-                  <p className="text-gray-500 mb-1">Detalle de Extras y Cambios / Extras & Changes Detail</p>
+                <div className="text-sm">
+                  <p className="text-gray-500 mb-1">Detalle de Extras / Extras Detail</p>
                   <p className="text-gray-800 bg-amber-50 rounded-lg p-3 border border-amber-100">{showRecibo.descripcionExtras}</p>
                 </div>
               )}
 
-              {/* Method */}
-              {/* Method */}
-              <div className="text-sm flex justify-between print:hidden">
-                <span className="text-gray-500">Método de Pago / Payment Method</span>
+              <div className="text-sm flex justify-between">
+                <span className="text-gray-500">Método / Method</span>
                 <span className="font-medium text-gray-900">{showRecibo.metodo}</span>
-              </div>
-
-              {/* Footer */}
-              <div className="text-center text-xs text-gray-400 border-t border-gray-200 pt-4">
-                <p>Este documento es un comprobante de pago oficial de GRUPO ZEN.</p>
-                <p>This document is an official payment receipt from GRUPO ZEN.</p>
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="p-4 border-t border-gray-100 flex gap-3 no-print">
+            <div className="p-4 border-t border-gray-100 flex gap-3">
               <button onClick={() => setShowRecibo(null)} className="flex-1 py-2.5 rounded-xl text-gray-600 hover:bg-gray-100 font-medium text-sm transition-colors border border-gray-200">
                 Cerrar
               </button>
@@ -482,12 +415,84 @@ export default function Pagos() {
                 className="flex-1 py-2.5 bg-gradient-to-r from-zen-600 to-zen-700 text-white rounded-xl font-medium shadow-lg shadow-zen-600/25 hover:shadow-xl transition-all text-sm flex items-center justify-center gap-2"
               >
                 <Printer size={16} />
-                Imprimir / Download PDF
+                Guardar PDF
               </button>
             </div>
           </div>
         </div>
       )}
     </div>
+
+    {/* EXCLUSIVE PRINT LAYOUT */}
+    <div className="hidden print:block text-black bg-white w-full print:p-8">
+      {showRecibo && (
+        <div className="space-y-6">
+          <div className="text-center border-b border-gray-200 pb-4 mb-6">
+            <h2 className="text-3xl font-bold">GRUPO ZEN</h2>
+            <h3 className="text-xl font-semibold text-gray-700 mt-2">Recibo de Pago / Receipt of Payment</h3>
+            <p className="text-sm text-gray-500 mt-1">No. {showRecibo.id} · {formatDate(showRecibo.fecha)}</p>
+          </div>
+
+          <table className="w-full text-sm mb-6 border-collapse">
+            <tbody>
+              <tr>
+                <td className="py-2 border-b border-gray-100 w-1/2 align-top">
+                  <p className="text-gray-500 text-xs mb-1">Cliente / Client</p>
+                  <p className="font-semibold text-gray-900">{showRecibo.clienteNombre}</p>
+                </td>
+                <td className="py-2 border-b border-gray-100 w-1/2 align-top pl-4">
+                  <p className="text-gray-500 text-xs mb-1">Cédula / ID</p>
+                  <p className="font-semibold text-gray-900">{showRecibo.clienteCedula}</p>
+                </td>
+              </tr>
+              <tr>
+                <td className="py-2 border-b border-gray-100 w-1/2 align-top pt-3">
+                  <p className="text-gray-500 text-xs mb-1">Proyecto / Project</p>
+                  <p className="font-semibold text-gray-900">{showRecibo.proyecto}</p>
+                </td>
+                <td className="py-2 border-b border-gray-100 w-1/2 align-top pl-4 pt-3">
+                  <p className="text-gray-500 text-xs mb-1">Casa / House No.</p>
+                  <p className="font-semibold text-gray-900">{showRecibo.numeroCasa}</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <table className="w-full text-base mb-6 border-collapse">
+            <tbody>
+              <tr>
+                <td className="py-3 text-gray-600 w-2/3 align-middle border-b border-gray-100">Saldo Anterior / Previous Balance</td>
+                <td className="py-3 text-right font-semibold w-1/3 align-middle border-b border-gray-100">{formatCurrency(showRecibo.montoAnterior)}</td>
+              </tr>
+              <tr>
+                <td className="py-3 text-gray-600 border-b border-gray-200 w-2/3 align-middle">Monto Abonado / Amount Paid</td>
+                <td className="py-3 text-right font-bold text-green-700 border-b border-gray-200 w-1/3 align-middle">{formatCurrency(showRecibo.monto)}</td>
+              </tr>
+              <tr>
+                <td className="py-4 font-semibold text-gray-900 w-2/3 align-middle border-b border-gray-200">Saldo Pendiente / Remaining Balance</td>
+                <td className="py-4 text-right text-lg font-bold text-gray-900 w-1/3 align-middle border-b border-gray-200">{formatCurrency(showRecibo.saldoPosterior)}</td>
+              </tr>
+              <tr>
+                <td className="py-4 text-gray-500 w-2/3 align-middle">Método de Pago / Payment Method</td>
+                <td className="py-4 text-right font-medium text-gray-900 w-1/3 align-middle">{showRecibo.metodo}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          {showRecibo.descripcionExtras && showRecibo.descripcionExtras !== 'Sin extras' && (
+             <div className="text-sm border border-gray-200 p-4 mt-8 bg-gray-50">
+                <p className="text-gray-500 font-semibold mb-2">Detalle de Extras y Cambios / Extras & Changes Detail</p>
+                <p className="font-medium text-gray-800">{showRecibo.descripcionExtras}</p>
+             </div>
+          )}
+
+          <div className="text-center text-sm text-gray-400 border-t border-gray-200 pt-8 mt-12">
+            <p>Este documento es un comprobante de pago oficial de GRUPO ZEN.</p>
+            <p className="italic mt-1">This document is an official payment receipt from GRUPO ZEN.</p>
+          </div>
+        </div>
+      )}
+    </div>
+    </>
   );
 }
