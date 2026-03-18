@@ -26,6 +26,7 @@ export default function Pagos() {
   const [payForm, setPayForm] = useState({ monto: '', metodo: 'Transferencia', notas: '' });
   const [successMsg, setSuccessMsg] = useState('');
   const [viewMode, setViewMode] = useState('grid');
+  const [isReadyToPrint, setIsReadyToPrint] = useState(false);
 
   const filtered = useMemo(() => {
     return clientes.filter(
