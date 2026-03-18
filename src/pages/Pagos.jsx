@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   CreditCard,
   DollarSign,
@@ -77,11 +77,16 @@ export default function Pagos() {
     setTimeout(() => setSuccessMsg(''), 4000);
   };
 
-  const handlePrint = () => {
-    setTimeout(() => {
-      window.print();
-    }, 100);
+  const handlePrintRequest = () => {
+    setIsReadyToPrint(true);
   };
+
+  useEffect(() => {
+    if (isReadyToPrint && showRecibo) {
+      window.print();
+      setIsReadyToPrint(false);
+    }
+  }, [isReadyToPrint, showRecibo]);
 
   return (
     <>
@@ -413,7 +418,7 @@ export default function Pagos() {
                 Cerrar
               </button>
               <button
-                onClick={handlePrint}
+                onClick={handlePrintRequest}
                 className="flex-1 py-2.5 bg-gradient-to-r from-zen-600 to-zen-700 text-white rounded-xl font-medium shadow-lg shadow-zen-600/25 hover:shadow-xl transition-all text-sm flex items-center justify-center gap-2"
               >
                 <Printer size={16} />
@@ -426,7 +431,7 @@ export default function Pagos() {
     </div>
 
     {/* EXCLUSIVE PRINT LAYOUT */}
-    <div className="hidden print:block fixed inset-0 w-full bg-white text-black z-[99999] print:p-8">
+    <div id="recibo-print" className="hidden print:block fixed inset-0 w-full bg-white text-black z-[99999] print:p-8">
       {showRecibo && (
         <div className="space-y-6">
           <div className="text-center border-b border-gray-200 pb-4 mb-6">

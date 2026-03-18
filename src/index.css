@@ -20,14 +20,16 @@
   body * {
     visibility: hidden;
   }
-  .print-area, .print-area * {
+  #recibo-print, #recibo-print * {
     visibility: visible;
   }
-  .print-area {
+  #recibo-print {
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
+    margin: 0;
+    padding: 0;
   }
   .no-print {
     display: none !important;

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   FileText,
@@ -26,6 +26,14 @@ export default function EstadoCuenta() {
   const { clientes, getCliente, getPagosByCliente, getAcuerdoByCliente, eliminarPago } = useStore();
 
   const [showRecibo, setShowRecibo] = useState(null);
+  const [isReadyToPrint, setIsReadyToPrint] = useState(false);
+
+  useEffect(() => {
+    if (isReadyToPrint) {
+      window.print();
+      setIsReadyToPrint(false);
+    }
+  }, [isReadyToPrint]);
 
   if (!id) {
     return <ClientSelector clientes={clientes} />;
@@ -81,7 +89,7 @@ export default function EstadoCuenta() {
           <p className="text-gray-500 mt-0.5">Account Statement</p>
         </div>
         <button
-          onClick={() => setTimeout(() => window.print(), 100)}
+          onClick={() => setIsReadyToPrint(true)}
           className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-zen-600 to-zen-700 text-white rounded-xl font-medium shadow-lg shadow-zen-600/25 hover:shadow-xl transition-all hover:-translate-y-0.5"
         >
           <Printer size={18} />
@@ -270,7 +278,7 @@ export default function EstadoCuenta() {
                 Cerrar
               </button>
               <button
-                onClick={() => setTimeout(() => window.print(), 100)}
+                onClick={() => setIsReadyToPrint(true)}
                 className="flex-1 py-2.5 bg-gradient-to-r from-zen-600 to-zen-700 text-white rounded-xl font-medium shadow-lg shadow-zen-600/25 hover:shadow-xl transition-all text-sm flex items-center justify-center gap-2"
               >
                 <Printer size={16} />
@@ -283,7 +291,7 @@ export default function EstadoCuenta() {
     </div>
 
     {/* EXCLUSIVE PRINT LAYOUT */}
-    <div className="hidden print:block fixed inset-0 w-full bg-white text-black z-[99999] print:p-8">
+    <div id="recibo-print" className="hidden print:block fixed inset-0 w-full bg-white text-black z-[99999] print:p-8">
       {showRecibo ? (
         <div className="space-y-6">
           <div className="text-center border-b border-gray-200 pb-4 mb-6">
