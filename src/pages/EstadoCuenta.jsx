@@ -283,7 +283,7 @@ export default function EstadoCuenta() {
     </div>
 
     {/* EXCLUSIVE PRINT LAYOUT */}
-    <div className="hidden print:block text-black bg-white w-full print:p-8">
+    <div className="hidden print:block fixed inset-0 w-full bg-white text-black z-[99999] print:p-8">
       {showRecibo ? (
         <div className="space-y-6">
           <div className="text-center border-b border-gray-200 pb-4 mb-6">
