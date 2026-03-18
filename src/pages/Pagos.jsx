@@ -366,7 +366,7 @@ export default function Pagos() {
               </div>
 
               {/* Client info */}
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-2 gap-4 text-sm print:hidden">
                 <div>
                   <p className="text-gray-500">Cliente / Client</p>
                   <p className="font-semibold text-gray-900">{showRecibo.clienteNombre}</p>
@@ -385,8 +385,35 @@ export default function Pagos() {
                 </div>
               </div>
 
+              {/* Client info (Print Layout) */}
+              <table className="hidden print:table w-full text-sm mb-6 border-collapse">
+                <tbody>
+                  <tr>
+                    <td className="py-2 border-b border-gray-100 w-1/2 align-top">
+                      <p className="text-gray-500 text-xs mb-1">Cliente / Client</p>
+                      <p className="font-semibold text-gray-900">{showRecibo.clienteNombre}</p>
+                    </td>
+                    <td className="py-2 border-b border-gray-100 w-1/2 align-top pl-4">
+                      <p className="text-gray-500 text-xs mb-1">Cédula / ID</p>
+                      <p className="font-semibold text-gray-900">{showRecibo.clienteCedula}</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 border-b border-gray-100 w-1/2 align-top pt-3">
+                      <p className="text-gray-500 text-xs mb-1">Proyecto / Project</p>
+                      <p className="font-semibold text-gray-900">{showRecibo.proyecto}</p>
+                    </td>
+                    <td className="py-2 border-b border-gray-100 w-1/2 align-top pl-4 pt-3">
+                      <p className="text-gray-500 text-xs mb-1">Casa / House No.</p>
+                      <p className="font-semibold text-gray-900">{showRecibo.numeroCasa}</p>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
               {/* Amount details */}
-              <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+              {/* Amount details */}
+              <div className="bg-gray-50 rounded-xl p-4 space-y-3 print:hidden">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Saldo Anterior / Previous Balance</span>
                   <span className="font-semibold">{formatCurrency(showRecibo.montoAnterior)}</span>
@@ -401,16 +428,39 @@ export default function Pagos() {
                 </div>
               </div>
 
+              {/* Amount details (Print Layout) */}
+              <table className="hidden print:table w-full text-sm mb-6 border-collapse">
+                <tbody>
+                  <tr>
+                    <td className="py-2 text-gray-600 w-2/3 align-middle">Saldo Anterior / Previous Balance</td>
+                    <td className="py-2 text-right font-semibold w-1/3 align-middle">{formatCurrency(showRecibo.montoAnterior)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 text-gray-600 border-b border-gray-200 w-2/3 align-middle">Monto Abonado / Amount Paid</td>
+                    <td className="py-2 text-right font-bold text-green-600 border-b border-gray-200 w-1/3 align-middle">{formatCurrency(showRecibo.monto)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 pt-4 font-semibold text-gray-900 w-2/3 align-middle border-b border-gray-200">Saldo Pendiente / Remaining Balance</td>
+                    <td className="py-3 pt-4 text-right text-base font-bold text-zen-700 w-1/3 align-middle border-b border-gray-200">{formatCurrency(showRecibo.saldoPosterior)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 text-gray-500 w-2/3 align-middle">Método de Pago / Payment Method</td>
+                    <td className="py-3 text-right font-medium text-gray-900 w-1/3 align-middle">{showRecibo.metodo}</td>
+                  </tr>
+                </tbody>
+              </table>
+
               {/* Extras */}
               {showRecibo.descripcionExtras && showRecibo.descripcionExtras !== 'Sin extras' && (
-                <div className="text-sm">
+                <div className="text-sm print:mt-6 print:break-inside-avoid">
                   <p className="text-gray-500 mb-1">Detalle de Extras y Cambios / Extras & Changes Detail</p>
                   <p className="text-gray-800 bg-amber-50 rounded-lg p-3 border border-amber-100">{showRecibo.descripcionExtras}</p>
                 </div>
               )}
 
               {/* Method */}
-              <div className="text-sm flex justify-between">
+              {/* Method */}
+              <div className="text-sm flex justify-between print:hidden">
                 <span className="text-gray-500">Método de Pago / Payment Method</span>
                 <span className="font-medium text-gray-900">{showRecibo.metodo}</span>
               </div>

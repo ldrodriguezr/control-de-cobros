@@ -102,12 +102,23 @@ export default function EstadoCuenta() {
                 {cliente.correo && <p className="text-zen-300 text-sm">{cliente.correo}</p>}
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print:hidden">
               <InfoPill icon={Building} label="Proyecto" value={cliente.proyecto} />
               <InfoPill icon={Building} label="Casa" value={cliente.numeroCasa} />
               <InfoPill icon={Calendar} label="Registro" value={formatDate(cliente.fechaRegistro)} />
               <InfoPill icon={CreditCard} label="Frecuencia" value={acuerdo?.frecuencia || 'N/A'} />
             </div>
+            {/* Header info table (Print Layout) */}
+            <table className="hidden print:table w-full text-sm mt-4 text-white">
+              <tbody>
+                <tr>
+                  <td className="w-1/4 pb-2"><p className="text-zen-300 text-[11px] mb-0.5">Proyecto</p><p className="font-semibold">{cliente.proyecto}</p></td>
+                  <td className="w-1/4 pb-2"><p className="text-zen-300 text-[11px] mb-0.5">Casa</p><p className="font-semibold">{cliente.numeroCasa}</p></td>
+                  <td className="w-1/4 pb-2"><p className="text-zen-300 text-[11px] mb-0.5">Registro</p><p className="font-semibold">{formatDate(cliente.fechaRegistro)}</p></td>
+                  <td className="w-1/4 pb-2"><p className="text-zen-300 text-[11px] mb-0.5">Frecuencia</p><p className="font-semibold">{acuerdo?.frecuencia || 'N/A'}</p></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
           <div className="p-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -140,7 +151,7 @@ export default function EstadoCuenta() {
         </div>
 
         {cliente.descripcionExtras && cliente.descripcionExtras !== 'Sin extras' && (
-          <div className="bg-amber-50 rounded-2xl border border-amber-200 p-5">
+          <div className="bg-amber-50 rounded-2xl border border-amber-200 p-5 print:break-inside-avoid print:mt-6 print:mb-6">
             <p className="text-sm font-semibold text-amber-800 mb-1">Detalle de Extras y Cambios / Extras &amp; Changes</p>
             <p className="text-sm text-amber-700">{cliente.descripcionExtras}</p>
           </div>
@@ -229,13 +240,39 @@ export default function EstadoCuenta() {
                 <h3 className="text-lg font-semibold text-gray-700">Recibo de Pago / Receipt of Payment</h3>
                 <p className="text-sm text-gray-500 mt-1">No. {showRecibo.id} · {formatDate(showRecibo.fecha)}</p>
               </div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-2 gap-4 text-sm print:hidden">
                 <div><p className="text-gray-500">Cliente / Client</p><p className="font-semibold text-gray-900">{showRecibo.clienteNombre}</p></div>
                 <div><p className="text-gray-500">Cédula / ID</p><p className="font-semibold text-gray-900">{showRecibo.clienteCedula}</p></div>
                 <div><p className="text-gray-500">Proyecto / Project</p><p className="font-semibold text-gray-900">{showRecibo.proyecto}</p></div>
                 <div><p className="text-gray-500">Casa / House No.</p><p className="font-semibold text-gray-900">{showRecibo.numeroCasa}</p></div>
               </div>
-              <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+
+              {/* Client info (Print Layout) */}
+              <table className="hidden print:table w-full text-sm mb-6 border-collapse">
+                <tbody>
+                  <tr>
+                    <td className="py-2 border-b border-gray-100 w-1/2 align-top">
+                      <p className="text-gray-500 text-xs mb-1">Cliente / Client</p>
+                      <p className="font-semibold text-gray-900">{showRecibo.clienteNombre}</p>
+                    </td>
+                    <td className="py-2 border-b border-gray-100 w-1/2 align-top pl-4">
+                      <p className="text-gray-500 text-xs mb-1">Cédula / ID</p>
+                      <p className="font-semibold text-gray-900">{showRecibo.clienteCedula}</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 border-b border-gray-100 w-1/2 align-top pt-3">
+                      <p className="text-gray-500 text-xs mb-1">Proyecto / Project</p>
+                      <p className="font-semibold text-gray-900">{showRecibo.proyecto}</p>
+                    </td>
+                    <td className="py-2 border-b border-gray-100 w-1/2 align-top pl-4 pt-3">
+                      <p className="text-gray-500 text-xs mb-1">Casa / House No.</p>
+                      <p className="font-semibold text-gray-900">{showRecibo.numeroCasa}</p>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div className="bg-gray-50 rounded-xl p-4 space-y-3 print:hidden">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Saldo Anterior / Previous Balance</span>
                   <span className="font-semibold">{formatCurrency(showRecibo.montoAnterior)}</span>
@@ -249,9 +286,31 @@ export default function EstadoCuenta() {
                   <span className="text-lg font-bold text-zen-700">{formatCurrency(showRecibo.saldoPosterior)}</span>
                 </div>
               </div>
+
+              {/* Amount details (Print Layout) */}
+              <table className="hidden print:table w-full text-sm mb-6 border-collapse">
+                <tbody>
+                  <tr>
+                    <td className="py-2 text-gray-600 w-2/3 align-middle">Saldo Anterior / Previous Balance</td>
+                    <td className="py-2 text-right font-semibold w-1/3 align-middle">{formatCurrency(showRecibo.montoAnterior)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 text-gray-600 border-b border-gray-200 w-2/3 align-middle">Monto Abonado / Amount Paid</td>
+                    <td className="py-2 text-right font-bold text-green-600 border-b border-gray-200 w-1/3 align-middle">{formatCurrency(showRecibo.monto)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 pt-4 font-semibold text-gray-900 w-2/3 align-middle border-b border-gray-200">Saldo Pendiente / Remaining Balance</td>
+                    <td className="py-3 pt-4 text-right text-base font-bold text-zen-700 w-1/3 align-middle border-b border-gray-200">{formatCurrency(showRecibo.saldoPosterior)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 text-gray-500 w-2/3 align-middle">Método de Pago / Payment Method</td>
+                    <td className="py-3 text-right font-medium text-gray-900 w-1/3 align-middle">{showRecibo.metodo}</td>
+                  </tr>
+                </tbody>
+              </table>
               {showRecibo.descripcionExtras && showRecibo.descripcionExtras !== 'Sin extras' && (
-                <div className="text-sm">
-                  <p className="text-gray-500 mb-1">Detalle de Extras / Extras Detail</p>
+                <div className="text-sm print:mt-6 print:break-inside-avoid">
+                  <p className="text-gray-500 mb-1">Detalle de Extras y Cambios / Extras &amp; Changes Detail</p>
                   <p className="text-gray-800 bg-amber-50 rounded-lg p-3 border border-amber-100">{showRecibo.descripcionExtras}</p>
                 </div>
               )}
