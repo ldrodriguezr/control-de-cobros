@@ -81,7 +81,7 @@ export default function EstadoCuenta() {
           <p className="text-gray-500 mt-0.5">Account Statement</p>
         </div>
         <button
-          onClick={() => window.print()}
+          onClick={() => setTimeout(() => window.print(), 100)}
           className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-zen-600 to-zen-700 text-white rounded-xl font-medium shadow-lg shadow-zen-600/25 hover:shadow-xl transition-all hover:-translate-y-0.5"
         >
           <Printer size={18} />
@@ -270,7 +270,7 @@ export default function EstadoCuenta() {
                 Cerrar
               </button>
               <button
-                onClick={() => window.print()}
+                onClick={() => setTimeout(() => window.print(), 100)}
                 className="flex-1 py-2.5 bg-gradient-to-r from-zen-600 to-zen-700 text-white rounded-xl font-medium shadow-lg shadow-zen-600/25 hover:shadow-xl transition-all text-sm flex items-center justify-center gap-2"
               >
                 <Printer size={16} />

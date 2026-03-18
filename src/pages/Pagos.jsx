@@ -78,7 +78,9 @@ export default function Pagos() {
   };
 
   const handlePrint = () => {
-    window.print();
+    setTimeout(() => {
+      window.print();
+    }, 100);
   };
 
   return (

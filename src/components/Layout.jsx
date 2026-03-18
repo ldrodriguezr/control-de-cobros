@@ -25,7 +25,7 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 flex print:block print:min-h-0 print:bg-white">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -36,7 +36,7 @@ export default function Layout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-72 bg-gradient-to-b from-zen-950 via-zen-900 to-zen-800 text-white flex flex-col transition-transform duration-300 ease-in-out ${
+        className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-72 bg-gradient-to-b from-zen-950 via-zen-900 to-zen-800 text-white flex flex-col transition-transform duration-300 ease-in-out print:hidden ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
@@ -85,9 +85,9 @@ export default function Layout() {
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-h-screen lg:min-w-0">
+      <div className="flex-1 flex flex-col min-h-screen lg:min-w-0 print:block print:min-h-0">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-lg border-b border-gray-200/60 px-4 sm:px-6 py-3 flex items-center gap-4">
+        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-lg border-b border-gray-200/60 px-4 sm:px-6 py-3 flex items-center gap-4 print:hidden">
           <button
             onClick={() => setSidebarOpen(true)}
             className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -104,7 +104,7 @@ export default function Layout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto print:overflow-visible print:p-0 print:flex-none">
           <Outlet />
         </main>
       </div>
