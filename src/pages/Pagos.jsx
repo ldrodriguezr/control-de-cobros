@@ -10,6 +10,9 @@ import {
   User,
   FileText,
   Printer,
+  LayoutGrid,
+  List,
+  ChevronRight,
 } from 'lucide-react';
 import { useStore } from '../data/useStore';
 import { formatCurrency, formatDate, formatDateEN } from '../utils/helpers';
@@ -22,6 +25,7 @@ export default function Pagos() {
   const [showRecibo, setShowRecibo] = useState(null);
   const [payForm, setPayForm] = useState({ monto: '', metodo: 'Transferencia', notas: '' });
   const [successMsg, setSuccessMsg] = useState('');
+  const [viewMode, setViewMode] = useState('grid');
 
   const filtered = useMemo(() => {
     return clientes.filter(
@@ -73,10 +77,25 @@ export default function Pagos() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Registro de Pagos</h1>
-        <p className="text-gray-500 mt-1">Registrar abonos y cancelaciones de clientes</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Registro de Pagos</h1>
+          <p className="text-gray-500 mt-1">Registrar abonos y cancelaciones de clientes</p>
+        </div>
+        <div className="flex bg-gray-100 rounded-xl p-1 gap-1 self-start sm:self-auto">
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${viewMode === 'grid' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            <LayoutGrid size={16} /><span className="hidden sm:inline">Grid</span>
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${viewMode === 'list' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            <List size={16} /><span className="hidden sm:inline">Lista</span>
+          </button>
+        </div>
       </div>
 
       {/* Success toast */}
@@ -99,70 +118,122 @@ export default function Pagos() {
         />
       </div>
 
-      {/* Client cards for payment */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((cliente) => {
-          const acuerdo = getAcuerdoByCliente(cliente.id);
-          const pagosRecientes = getPagosByCliente(cliente.id).slice(-3).reverse();
-          return (
-            <div key={cliente.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-zen-600 to-zen-800 flex items-center justify-center text-white font-bold text-sm">
-                  {cliente.nombre.split(' ').map(n => n[0]).slice(0, 2).join('')}
+      {viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map((cliente) => {
+            const acuerdo = getAcuerdoByCliente(cliente.id);
+            const pagosRecientes = getPagosByCliente(cliente.id).slice(-3).reverse();
+            return (
+              <div key={cliente.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-zen-600 to-zen-800 flex items-center justify-center text-white font-bold text-sm">
+                    {cliente.nombre.split(' ').map(n => n[0]).slice(0, 2).join('')}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 truncate">{cliente.nombre}</p>
+                    <p className="text-xs text-gray-500">{cliente.proyecto} · Casa {cliente.numeroCasa}</p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 truncate">{cliente.nombre}</p>
-                  <p className="text-xs text-gray-500">{cliente.proyecto} · Casa {cliente.numeroCasa}</p>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="bg-red-50 rounded-xl p-3 text-center">
-                  <p className="text-[11px] text-red-500 font-medium">Saldo Pendiente</p>
-                  <p className="font-bold text-red-700">{formatCurrency(cliente.montoAdeudado)}</p>
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-red-50 rounded-xl p-3 text-center">
+                    <p className="text-[11px] text-red-500 font-medium">Saldo Pendiente</p>
+                    <p className="font-bold text-red-700">{formatCurrency(cliente.montoAdeudado)}</p>
+                  </div>
+                  <div className="bg-blue-50 rounded-xl p-3 text-center">
+                    <p className="text-[11px] text-blue-500 font-medium">Cuota</p>
+                    <p className="font-bold text-blue-700">{acuerdo ? formatCurrency(acuerdo.montoCuota) : '—'}</p>
+                  </div>
                 </div>
-                <div className="bg-blue-50 rounded-xl p-3 text-center">
-                  <p className="text-[11px] text-blue-500 font-medium">Cuota</p>
-                  <p className="font-bold text-blue-700">{acuerdo ? formatCurrency(acuerdo.montoCuota) : '—'}</p>
-                </div>
-              </div>
 
-              {/* Recent payments */}
-              {pagosRecientes.length > 0 && (
-                <div className="mb-4 space-y-1.5">
-                  <p className="text-xs font-medium text-gray-500">Últimos pagos:</p>
-                  {pagosRecientes.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-1.5">
-                      <span>{formatDate(p.fecha)}</span>
-                      <span className="font-semibold text-green-600">{formatCurrency(p.monto)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <button
-                onClick={() => handleOpenPay(cliente)}
-                disabled={cliente.montoAdeudado <= 0}
-                className={`w-full py-2.5 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all ${
-                  cliente.montoAdeudado <= 0
-                    ? 'bg-green-100 text-green-700 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-zen-600 to-zen-700 text-white shadow-lg shadow-zen-600/25 hover:shadow-xl hover:-translate-y-0.5'
-                }`}
-              >
-                {cliente.montoAdeudado <= 0 ? (
-                  <>
-                    <CheckCircle size={16} /> Pagado en su totalidad
-                  </>
-                ) : (
-                  <>
-                    <DollarSign size={16} /> Registrar Pago
-                  </>
+                {/* Recent payments */}
+                {pagosRecientes.length > 0 && (
+                  <div className="mb-4 space-y-1.5">
+                    <p className="text-xs font-medium text-gray-500">Últimos pagos:</p>
+                    {pagosRecientes.map((p) => (
+                      <div key={p.id} className="flex items-center justify-between text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-1.5">
+                        <span>{formatDate(p.fecha)}</span>
+                        <span className="font-semibold text-green-600">{formatCurrency(p.monto)}</span>
+                      </div>
+                    ))}
+                  </div>
                 )}
-              </button>
-            </div>
-          );
-        })}
-      </div>
+
+                <button
+                  onClick={() => handleOpenPay(cliente)}
+                  disabled={cliente.montoAdeudado <= 0}
+                  className={`w-full py-2.5 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all ${
+                    cliente.montoAdeudado <= 0
+                      ? 'bg-green-100 text-green-700 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-zen-600 to-zen-700 text-white shadow-lg shadow-zen-600/25 hover:shadow-xl hover:-translate-y-0.5'
+                  }`}
+                >
+                  {cliente.montoAdeudado <= 0 ? (
+                    <>
+                      <CheckCircle size={16} /> Pagado en su totalidad
+                    </>
+                  ) : (
+                    <>
+                      <DollarSign size={16} /> Registrar Pago
+                    </>
+                  )}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50/80">
+                <th className="px-5 py-3 text-left font-semibold text-gray-600">Cliente</th>
+                <th className="px-5 py-3 text-left font-semibold text-gray-600">Proyecto</th>
+                <th className="px-5 py-3 text-right font-semibold text-gray-600">Saldo Pendiente</th>
+                <th className="px-5 py-3 text-right font-semibold text-gray-600">Cuota</th>
+                <th className="px-5 py-3"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {filtered.map((cliente) => {
+                const acuerdo = getAcuerdoByCliente(cliente.id);
+                return (
+                  <tr key={cliente.id} className="hover:bg-zen-50/30 transition-colors">
+                    <td className="px-5 py-3.5">
+                      <p className="font-semibold text-gray-900">{cliente.nombre}</p>
+                      <p className="text-xs text-gray-400">{cliente.cedula}</p>
+                    </td>
+                    <td className="px-5 py-3.5 text-gray-600">{cliente.proyecto} · Casa {cliente.numeroCasa}</td>
+                    <td className={`px-5 py-3.5 text-right font-bold ${cliente.montoAdeudado > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      {formatCurrency(cliente.montoAdeudado)}
+                    </td>
+                    <td className="px-5 py-3.5 text-right font-semibold text-blue-700">
+                      {acuerdo ? formatCurrency(acuerdo.montoCuota) : '—'}
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      {cliente.montoAdeudado <= 0 ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-600 bg-green-50 px-2 py-1 rounded-lg">
+                          <CheckCircle size={14} /> Pagado
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleOpenPay(cliente)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-zen-600 text-white hover:bg-zen-700 rounded-lg text-xs font-medium transition-colors"
+                        >
+                          <DollarSign size={14} /> Registrar Pago
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+              {filtered.length === 0 && (
+                <tr><td colSpan={5} className="px-5 py-10 text-center text-gray-400">No se encontraron clientes</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Payment Modal */}
       {showPayModal && selectedCliente && (
