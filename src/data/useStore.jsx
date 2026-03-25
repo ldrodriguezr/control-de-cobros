@@ -368,6 +368,7 @@ export function StoreProvider({ children }) {
       monto_abonado: montoAbonado,
       comision_generada: comisionGenerada,
       saldo_restante_momento_pago: saldoRestante,
+      fecha: pago.fecha || new Date().toISOString().split('T')[0],
     };
 
     const { data, error } = await supabase

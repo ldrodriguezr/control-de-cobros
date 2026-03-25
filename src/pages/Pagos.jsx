@@ -38,7 +38,7 @@ export default function Pagos() {
 
   const handleOpenPay = (cliente) => {
     setSelectedCliente(cliente);
-    setPayForm({ monto: '', metodo: 'Transferencia', notas: '' });
+    setPayForm({ monto: '', metodo: 'Transferencia', notas: '', fecha: new Date().toISOString().split('T')[0] });
     setShowPayModal(true);
   };
 
@@ -54,6 +54,7 @@ export default function Pagos() {
       saldoPosterior,
       metodo: payForm.metodo,
       notas: payForm.notas,
+      fecha: payForm.fecha,
     });
 
     if (!nuevoPago) return; // Fail safe
@@ -304,6 +305,18 @@ export default function Pagos() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Payment Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha del Pago</label>
+                <input
+                  type="date"
+                  value={payForm.fecha}
+                  onChange={(e) => setPayForm((f) => ({ ...f, fecha: e.target.value }))}
+                  required
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-zen-500 focus:ring-2 focus:ring-zen-500/20 outline-none transition-all text-sm"
+                />
               </div>
 
               {/* Method */}
