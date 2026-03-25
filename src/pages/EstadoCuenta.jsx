@@ -69,7 +69,15 @@ export default function EstadoCuenta() {
       'Dear customer, attached you can find the account statement corresponding to your extras. Regards.\n\n' +
       'GRUPO ZEN - Departamento de Cobros / Billing Department'
     );
-    window.open(`mailto:${cliente.correo || ''}?subject=${subject}&body=${body}`, '_self');
+    const mailtoLink = `mailto:${cliente.correo || ''}?subject=${subject}&body=${body}`;
+
+    // Step 1: Open print dialog so the user can save the PDF
+    // Step 2: As soon as the print dialog closes, open the email client automatically
+    window.onafterprint = () => {
+      window.onafterprint = null;
+      window.open(mailtoLink, '_self');
+    };
+    window.print();
   };
 
   const handleVerRecibo = (pago) => {
