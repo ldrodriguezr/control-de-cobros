@@ -10,7 +10,9 @@ import {
   X,
   Building2,
   Percent,
+  LogOut,
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -23,6 +25,7 @@ const navItems = [
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { session, signOut } = useAuth();
 
   return (
     <div className="min-h-screen bg-gray-50 flex print:block print:min-h-0 print:bg-white">
@@ -95,11 +98,22 @@ export default function Layout() {
             <Menu size={22} className="text-gray-600" />
           </button>
           <div className="flex-1" />
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-zen-600 to-zen-800 flex items-center justify-center text-white text-xs font-bold">
+          <div className="flex items-center gap-3">
+            {session?.user?.email && (
+              <span className="hidden sm:inline text-sm text-gray-500 max-w-[180px] truncate">
+                {session.user.email}
+              </span>
+            )}
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-zen-600 to-zen-800 flex items-center justify-center text-white text-xs font-bold shrink-0">
               GZ
             </div>
-            <span className="hidden sm:inline font-medium text-gray-700">Administrador</span>
+            <button
+              onClick={signOut}
+              title="Cerrar sesión"
+              className="p-2 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+            >
+              <LogOut size={18} />
+            </button>
           </div>
         </header>
 

@@ -1,6 +1,9 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { StoreProvider, useStore } from './data/useStore';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
+import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Clientes from './pages/Clientes';
 import Acuerdos from './pages/Acuerdos';
@@ -23,7 +26,17 @@ function AppContent() {
 
   return (
     <Routes>
-      <Route element={<Layout />}>
+      {/* Public routes */}
+      <Route path="/login" element={<Login />} />
+
+      {/* Protected routes */}
+      <Route
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<Dashboard />} />
         <Route path="clientes" element={<Clientes />} />
         <Route path="acuerdos" element={<Acuerdos />} />
@@ -32,16 +45,21 @@ function AppContent() {
         <Route path="estados/:id" element={<EstadoCuenta />} />
         <Route path="comisiones" element={<Comisiones />} />
       </Route>
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
 
 export default function App() {
   return (
-    <StoreProvider>
-      <BrowserRouter>
-        <AppContent />
-      </BrowserRouter>
-    </StoreProvider>
+    <AuthProvider>
+      <StoreProvider>
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
+      </StoreProvider>
+    </AuthProvider>
   );
 }
