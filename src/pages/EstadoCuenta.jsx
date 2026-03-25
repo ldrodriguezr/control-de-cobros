@@ -31,8 +31,11 @@ export default function EstadoCuenta() {
 
   useEffect(() => {
     if (isReadyToPrint) {
-      window.print();
-      setIsReadyToPrint(false);
+      const timer = setTimeout(() => {
+        window.print();
+        setIsReadyToPrint(false);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [isReadyToPrint]);
 
