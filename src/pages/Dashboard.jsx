@@ -22,7 +22,7 @@ export default function Dashboard() {
       .filter((a) => a.estado === 'Activo')
       .map((acuerdo) => {
         const cliente = clientes.find((c) => c.id === acuerdo.clienteId);
-        if (!cliente) return null;
+        if (!cliente || cliente.montoAdeudado <= 0) return null;
         let tipo = 'normal';
         let label = '';
         const dias = getDaysUntil(acuerdo.fechaProximoPago);
