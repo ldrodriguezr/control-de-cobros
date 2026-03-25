@@ -27,6 +27,7 @@ const emptyForm = {
   numeroCasa: '',
   montoAdeudado: '',
   descripcionExtras: '',
+  categoria: 'Smart Living',
 };
 
 export default function Clientes() {
@@ -80,10 +81,7 @@ export default function Clientes() {
         proyecto: form.proyecto,
         numeroCasa: form.numeroCasa,
         descripcionExtras: form.descripcionExtras,
-        ...(editingId ? {} : {
-          montoOriginal: parseFloat(form.montoAdeudado) || 0,
-          montoAdeudado: parseFloat(form.montoAdeudado) || 0,
-        }),
+        categoria: form.categoria,
       });
     } else {
       agregarCliente({
@@ -108,6 +106,7 @@ export default function Clientes() {
       numeroCasa: cliente.numeroCasa,
       montoAdeudado: String(cliente.montoAdeudado),
       descripcionExtras: cliente.descripcionExtras,
+      categoria: cliente.categoria || 'Smart Living',
     });
     setShowForm(true);
   };
@@ -158,6 +157,19 @@ export default function Clientes() {
             <InputField label="Correo Electrónico" name="correo" value={form.correo} onChange={handleChange} icon={Mail} type="email" required />
             <InputField label="Proyecto" name="proyecto" value={form.proyecto} onChange={handleChange} icon={Building} required />
             <InputField label="Número de Casa" name="numeroCasa" value={form.numeroCasa} onChange={handleChange} icon={Building} required />
+            {/* Categoría dropdown */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+              <select
+                name="categoria"
+                value={form.categoria}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-zen-500 focus:ring-2 focus:ring-zen-500/20 outline-none transition-all text-sm bg-white"
+              >
+                <option value="Smart Living">Smart Living</option>
+                <option value="Extras">Extras</option>
+              </select>
+            </div>
             {!editingId && (
               <InputField label="Monto Adeudado ($)" name="montoAdeudado" value={form.montoAdeudado} onChange={handleChange} icon={CreditCard} type="number" required />
             )}

@@ -20,6 +20,7 @@ function mapClienteFromDb(c, pagadoTotal = 0) {
     montoOriginal: original,
     montoAdeudado: Math.max(0, original - pagadoTotal),
     descripcionExtras: c.descripcion_extras,
+    categoria: c.categoria || 'Smart Living',
     fechaRegistro: c.created_at || new Date().toISOString(),
   };
 }
@@ -34,6 +35,7 @@ function mapClienteToDb(ui) {
     numero_casa: ui.numeroCasa,
     monto_adeudado_inicial: Number(ui.montoOriginal || ui.montoAdeudado || 0),
     descripcion_extras: ui.descripcionExtras,
+    categoria: ui.categoria || 'Smart Living',
   };
 }
 
