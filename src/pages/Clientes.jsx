@@ -70,10 +70,10 @@ export default function Clientes() {
     return sortDir === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (editingId) {
-      actualizarCliente(editingId, {
+      await actualizarCliente(editingId, {
         nombre: form.nombre,
         cedula: form.cedula,
         telefono: form.telefono,
@@ -84,11 +84,15 @@ export default function Clientes() {
         categoria: form.categoria,
       });
     } else {
-      agregarCliente({
+      const result = await agregarCliente({
         ...form,
         montoOriginal: parseFloat(form.montoAdeudado) || 0,
         montoAdeudado: parseFloat(form.montoAdeudado) || 0,
       });
+      if (result?.error) {
+        window.alert(result.error);
+        return;
+      }
     }
     setForm(emptyForm);
     setShowForm(false);

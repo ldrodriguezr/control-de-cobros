@@ -209,12 +209,16 @@ export function StoreProvider({ children }) {
 
     if (error) {
       console.error('Error adding cliente:', error);
-      return null;
+      const hint =
+        error.code === '23505'
+          ? ' (Cédula duplicada en la base de datos: ejecuta supabase/migrations/001_allow_same_cedula_multiple_categories.sql en el SQL Editor de Supabase.)'
+          : '';
+      return { error: `${error.message || 'Error al guardar'}${hint}` };
     }
 
     const nuevoUi = mapClienteFromDb(data, 0);
     setClientes((prev) => [...prev, nuevoUi]);
-    return nuevoUi;
+    return { cliente: nuevoUi };
   }, []);
 
   const actualizarCliente = useCallback(async (id, dataObj) => {
@@ -228,6 +232,7 @@ export function StoreProvider({ children }) {
     if (dataObj.numeroCasa !== undefined) dbObj.numero_casa = dataObj.numeroCasa;
     if (dataObj.montoOriginal !== undefined) dbObj.monto_adeudado_inicial = Number(dataObj.montoOriginal);
     if (dataObj.descripcionExtras !== undefined) dbObj.descripcion_extras = dataObj.descripcionExtras;
+    if (dataObj.categoria !== undefined) dbObj.categoria = dataObj.categoria;
 
     // montoAdeudado is computed, not persisted
     if (Object.keys(dbObj).length === 0) {
@@ -259,6 +264,7 @@ export function StoreProvider({ children }) {
         numeroCasa: data.numero_casa,
         montoOriginal: Number(data.monto_adeudado_inicial),
         descripcionExtras: data.descripcion_extras,
+        categoria: data.categoria || 'Smart Living',
       };
     }));
     return data;
