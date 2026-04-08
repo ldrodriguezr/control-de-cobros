@@ -211,7 +211,7 @@ export function StoreProvider({ children }) {
       console.error('Error adding cliente:', error);
       const hint =
         error.code === '23505'
-          ? ' (Cédula duplicada en la base de datos: ejecuta supabase/migrations/001_allow_same_cedula_multiple_categories.sql en el SQL Editor de Supabase.)'
+          ? ' En Supabase → SQL Editor ejecuta: ALTER TABLE public.clientes DROP CONSTRAINT IF EXISTS cliente_propiedad_unica; (y el resto del script en supabase/migrations/001_allow_same_cedula_multiple_categories.sql si aplica.)'
           : '';
       return { error: `${error.message || 'Error al guardar'}${hint}` };
     }
